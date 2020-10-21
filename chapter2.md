@@ -411,7 +411,7 @@ typedef struct {
 
 下面我们通过一个图来看看用ELF文件头与程序头表项如何找到文件的第i段。
 
- <img src="pictures/fig2_2.png" alt="fig2_2" style="zoom:67%;" />
+ <img src="pictures/fig2_2.png" alt="fig2_2" style="zoom:50%;" />
 
 图2.2 找到文件第i段的过程
 
