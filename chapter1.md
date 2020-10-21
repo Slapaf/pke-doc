@@ -6,7 +6,7 @@
 
 RISC-V（读做“risk-five”）是一种典型的精简（Reduced Instruction Set Computer，简写为RISC）指令集（Instruction Set Architecture，简写为ISA），它是加利福尼亚大学伯克利分校的David Patterson教授与Krste Asanovic教授研究团队于2010年提出的一个开放指令集架构。名称中的“V”指的是该ISA的第五个版本，有时“V”也被解读为向量（Vector）扩展。与之前的诸多商用指令集（如x86、ARM，以及MIPS等）不同的是，RISC-V是一个开放指令集，它的提出受到了全球工业界和学术界的广泛关注。在我国，RISC-V的发展、研究和应用同样得到了广泛关注，在网信办、工信部、中科院等多个国家部委支持和指导下，中国开放指令生态（RISC-V）联盟于2018年11月8日浙江乌镇举行的第五届互联网大会上正式宣布成立。
 
-我们认为，相比于传统的商用指令集架构，RISC-V指令集以及其背后的计算机架构具有以下优点：
+相比于传统的商用指令集架构，RISC-V指令集以及其背后的计算机架构具有以下优点：
 
 ● **后发优势**。RISC-V指令集的提出，是借鉴了之前的传统商业指令集，通过取长补短而得到的。相比于之前的指令集，RISC-V避免了很多前人踩过的非常多的坑。
 
@@ -55,21 +55,21 @@ RISC-V（读做“risk-five”）是一种典型的精简（Reduced Instruction 
 
 **1.2.2 指令格式**
 
-图1.3列出了RV64I（RV64G的整数指令子集）的常用基础指令。
+图1.1列出了RV64I（RV64G的整数指令子集）的常用基础指令。
 
- 
+ ![fig1_1](pictures/fig1_1.png)
 
-图1.2 RV64I的常用基础指令，带下划线的粗体字母从左到右连起来构成RV64I指令。
+图1.1 RV64I的常用基础指令，带下划线的粗体字母从左到右连起来构成RV64I指令。
 
-从图1.3中，我们看到RV64I的常用基础指令并不多，分为整数指令（Integer computation）、访存指令（Load and Store）和控制转移指令（即跳转指令，Control transfer），每条指令的名称取图中下划线和标黑的字母构成。例如，最基础的加法指令为add，如果累加的其中一个操作数为立即数，则指令为addi。实际上，除了列出的指令外，RV64I还包括很多其他的指令，例如用于机器状态控制的指令、内存墙指令等。我们将在1.4节中讨论机器状态控制指令，在1.5节讨论与虚拟存储相关的指令。
+从图1.1中，我们看到RV64I的常用基础指令并不多，分为整数指令（Integer computation）、访存指令（Load and Store）和控制转移指令（即跳转指令，Control transfer），每条指令的名称取图中下划线和标黑的字母构成。例如，最基础的加法指令为add，如果累加的其中一个操作数为立即数，则指令为addi。实际上，除了列出的指令外，RV64I还包括很多其他的指令，例如用于机器状态控制的指令、内存墙指令等。我们将在1.4节中讨论机器状态控制指令，在1.5节讨论与虚拟存储相关的指令。
 
 RISC-V汇编指令的格式与8086汇编是截然不同的。以最基础的加法指令为例，它的指令格式（以加法指令add为例）为：
 
-add rd, rs1, rs2
+`add rd, rs1, rs2`
 
 或者
 
-addi rd, rs1, immediate
+`addi rd, rs1, immediate`
 
 其中，rd代表目标寄存器（register destination），rs1和rs2分别代表源寄存器1（register source）和源寄存器2，immediate代表立即数。前一条指令的执行效果是将两个源寄存器（rs1和rs2）中所存储的值进行求和，并将结果写到rd寄存器；后一条指令的执行，将源寄存器1中的值与立即数相加，结果写到rd寄存器（忽略算术溢出）。需要注意的是，由于我们采用了64位指令集，意味着以上指令中所有的操作数（无论是rd还是rs中的值，以及immediate）都是64位的。如果immediate不足64位，则对其进行符号位（最高位）扩展到64位。如果要操作更小一点的数，则需要用到addw，它最后的w符号表示操作数为一个字（32位）。
 
@@ -81,25 +81,25 @@ addi rd, rs1, immediate
 
 我们以ld（load）指令和sw（store word）指令为例来说明RISC-V的访存指令，以下是ld指令的语法：
 
-ld rd, offset(rs1)
+`ld rd, offset(rs1)`
 
 执行ld指令的动作是将立即数offset进行符号扩展，与源寄存器rs1中的值进行求和，得到地址A，然后读出内存中A所对应地址的8个字节（64位），写到目的寄存器rd中。
 
 以下是sw指令的语法：
 
-sw rs2, offset(rs1)
+`sw rs2, offset(rs1)`
 
 它的作用是将立即数offset进行符号扩展，与源寄存器rs1中的值进行求和，得到地址A，然后将源寄存器rs2中的低位4字节（注意，不是8个字节，因为操纵的是word，即32位4字节）写到内存中以地址A开始的4个字节中。当RISC-V处理器采用s开始的指令（如例子中的sw、双字存储指令sd等）向内存中写入数据的时候，地址是从低端地址向高端地址发展的。同时，采用了小端对齐（little-endian）的字节序：当写入一个8字节的数值到内存中时，将该数值的低位部分放在低地址端。
 
 以上的例子中，假设A=0x0000 0000 0000 0800，rs2寄存器中的低位4字节数值为0x1234ABCD，则sw指令执行完后内存中的数值为：
 
-[0x0000 0000 0000 0800] = 0xCD
+`[0x0000 0000 0000 0800] = 0xCD`
 
-[0x0000 0000 0000 0801] = 0xAB
+`[0x0000 0000 0000 0801] = 0xAB`
 
-[0x0000 0000 0000 0802] = 0x34
+`[0x0000 0000 0000 0802] = 0x34`
 
-[0x0000 0000 0000 0803] = 0x12
+`[0x0000 0000 0000 0803] = 0x12`
 
  
 
@@ -111,19 +111,19 @@ sw rs2, offset(rs1)
 
 基本行内汇编很容易理解，一般是按照下面的格式：
 
-asm(“statements”);
+`asm(“statements”);`
 
 该语句中“asm”也可以由“__asm__”来代替。在“asm”后面有时也会加上“__volatile__”表示编译器不要对括弧内的汇编代码进行任何优化，保持指令的原样。“asm”后面括号里面的便是汇编指令。例如：
 
-asm(“li x17,81”);      //将立即数81存入x17寄存器
+`asm(“li x17,81”);      //将立即数81存入x17寄存器`
 
-asm(“ecall”);         //调用ecall指令（作用类似8086上的int指令）
+`asm(“ecall”);         //调用ecall指令（作用类似8086上的int指令）`
 
 编译器碰到以上语句后，会将引号中的汇编语句直接翻译成对应的机器码，放到所生成的目标代码中。这两行代码的作用是调用81号软中断（即1.4节中的trap），但因为它们是相邻的汇编语句，所以可以用以下的形式书写：
 
-asm(“li x17,81\n\t”
+`asm(“li x17,81\n\t”`
 
-  “ecall”);
+  `“ecall”);`
 
 也就是采用分隔符“\n\t”隔开多条汇编指令。对于编译器而言，以上两种写法是等效的。实际上GCC编译器在处理内联汇编语句时，是要把asm(…)的内容“打印”到汇编文件中，所以格式控制字符是必要的。
 
@@ -131,17 +131,17 @@ asm(“li x17,81\n\t”
 
 扩展内联汇编使得嵌入在C语言中的代码能够带输入、输出参数，同时将被汇编代码块改变的寄存器“通知”给GCC编译器，作为后者在调度寄存器时的参考。扩展内联汇编的格式为：
 
-asm volatile( 
+`asm volatile(` 
 
-"statements"（汇编语句模板）: 
+`"statements"（汇编语句模板）:` 
 
-output_regs（输出部分）: 
+`output_regs（输出部分）:` 
 
-input_regs（输入部分）:
+`input_regs（输入部分）:`
 
-clobbered_regs（破坏描述部分）
+`clobbered_regs（破坏描述部分）`
 
-) ；
+`) ；`
 
 其中asm 表示后面的代码为内嵌汇编，也可以写作__asm__；volatile 表示不想让编译器对里面的汇编代码进行优化，也可以写作__volatile__ 。"statements"是汇编语句模板；output_regs是内联汇编的输出部分，可以理解为将要被汇编语句修改的寄存器组；input_regs是内联汇编的输入部分，即语句执行所需要的输入寄存器；clobbered_regs是破坏描述部分，代表将要被汇编语句改变（破坏）的内容。扩展内联汇编中汇编语句模版是必须要的，其它3部分则都是可选内容，以下对这些部分分别进行解释：
 
@@ -164,23 +164,23 @@ clobbered_regs（破坏描述部分）
 
 我们来看一个C语言内嵌汇编代码的例子：
 
-int dest=0;
+`int dest=0;`
 
-int value=1;
+`int value=1;`
 
-asm volatile (
+`asm volatile (`
 
-   "lw t0,%1 \n\t"
+   `"lw t0,%1 \n\t"`
 
-   "add t0,t0,t0 \n\t"
+   `"add t0,t0,t0 \n\t"`
 
-   "sd t0,%0"
+   `"sd t0,%0"`
 
-   :"=m"(dest)       //输出部分
+   `:"=m"(dest)       //输出部分`
 
-   :"m" (value)      //输入部分
+   `:"m" (value)      //输入部分`
 
-   : "memory");      //破坏描述部分
+   `: "memory");      //破坏描述部分`
 
 在这个例子定义了两个局部变量dest和value，它们的初值分别为0和1。接下来的扩展内联汇编代码将value的值读入t0寄存器，作为输入；接着使用add指令使t0中的值自我相加（即t0=t0+t0）；最后再将结果写回dest局部变量。需要注意的是，这里%0对应输出部分的dest，而%1对应着输入部分的value，因为dest在汇编代码模板之后先出现的是dest，后出现的是value。
 
@@ -190,57 +190,59 @@ asm volatile (
 
 我们再看一个稍微大一点的例子，通过这个例子我们希望能尽量把以上的知识点串起来，加深读者对RISC-V汇编语言的理解。假设有以下C语言程序test_asm.c，其源代码如例1.1所示：
 
- 1 #include <stdio.h>
+```
+ `1 #include <stdio.h>`
 
- 2
+ `2`
 
- 3 void bar()
+ `3 void bar()`
 
- 4 {
+ `4 {`
 
- 5   asm volatile( "li s5, 300" );
+ `5   asm volatile( "li s5, 300" );`
 
- 6 }
+ `6 }`
 
- 7
+ `7`
 
- 8 int foo( int foo_arg )
+ `8 int foo( int foo_arg )`
 
- 9 {
+ `9 {`
 
- 10   int x;
+ `10   int x;`
 
- 11   asm volatile( "li s5, 500" );
+ `11   asm volatile( "li s5, 500" );`
 
- 12   bar();
+ `12   bar();`
 
- 13   asm volatile (
+ `13   asm volatile (`
 
- 14      "sd s5,%0"
+ `14      "sd s5,%0"`
 
- 15      :"=m"(x)
+ `15      :"=m"(x)`
 
- 16      :
+ `16      :`
 
- 17      : "memory");
+ `17      : "memory");`
 
- 18   printf( "x=%d\n", x );
+ `18   printf( "x=%d\n", x );`
 
- 19   return 10;
+ `19   return 10;`
 
- 20 }
+ `20 }`
 
- 21
+ `21`
 
- 22 int main()
+ `22 int main()`
 
- 23 {
+ `23 {`
 
- 24   foo( 10 );
+ `24   foo( 10 );`
 
- 25   return 0;
+ `25   return 0;`
 
- 26 }
+ `26 }`
+```
 
 例1.1 test_asm.c代码列表
 
@@ -248,20 +250,21 @@ asm volatile (
 
 将例1.1采用RISC-V交叉编译器编译为二进制代码，使用以下命令行： 
 
-riscv64-unknown-elf-gcc test_asm.c -march='rv64g' -o test
+`$riscv64-unknown-elf-gcc test_asm.c -march='rv64g' -o test`
 
 编译时我们通过GCC的“-march”开关指定目标指令集是RV64G。接下来采用以下命令执行例1.1中的代码（其中spike为模拟器，pke为我们的PKE内核，test为例1.1所对应的二进制代码）：
 
-$ spike pke test
+`$ spike pke test`
 
 以上命令的执行结果为“x=300”。
 
 这说明编译器为了代码的效率，并未完全遵守RISC-V对寄存器使用的规范。我们可以对所生成的test文件进行反汇编：
 
-riscv64-unknown-elf-objdump -D ./test | less
+`$riscv64-unknown-elf-objdump -D ./test | less`
 
 得到以下输出：
 
+```
 00000000000101a4 <bar>:
 
   101a4:    ff010113        addi  sp,sp,-16
@@ -347,14 +350,15 @@ riscv64-unknown-elf-objdump -D ./test | less
   1023c:    01010113        addi  sp,sp,16
 
   10240:    00008067        ret
+```
 
 输出的第一列是我们的程序地址（也称逻辑地址）；第二列是机器码，我们看到RV64G的机器码都是规整的32位（4个字节），这符合RISC指令集的特点；之后的列就是对应的汇编代码了。其中比较重要的指令是jal（jump and link），其作用是将返回地址（pc+4）写道ra寄存器中，且将pc赋值为第二个参数（即跳转到第二个参数所指向的逻辑地址）。另一个重要的指令是ret，其作用是将pc的赋值为ra寄存器的内容（即跳转到函数被调用之前保存的函数返回地址）。从反汇编的结果上来看，test中并未对s开始的寄存器进行任何的保护动作，这就是为什么我们得到“x=300”结果的原因。
 
 我们仍然以例1.1为例分析RISC-V程序执行过程中，栈的变化。RISC-V并未提供push和pop指令，所以函数开始时对sp寄存器的操作都是RISC-V版本的入栈动作。例如，main函数中的“addi sp,sp,-16”指令，将sp减去16然后赋值给sp，其实质是在栈顶“空出”16个字节的空间，然后将必要的内容进行压栈。如后续的“sd ra,8(sp)”就是将返回地址（ra寄存器中的内容）压栈；而“sd s0,0(sp)”是将fp寄存器中的内容压栈（s0和fp是同一个寄存器，参见表1.1）。例1.1中程序从main函数到bar函数的函数调用过程中，它的程序栈将形成图1.2中所示的结构：
 
- 
+ <img src="pictures/fig1_2.png" alt="fig1_2" style="zoom:80%;" />
 
-图1.3 例1.1程序的函数调用栈结构（从main函数到bar函数）
+图1.2 例1.1程序的函数调用栈结构（从main函数到bar函数）
 
 我们看到，不同的函数具有的栈帧（stack frame）的大小实际上是很不一样的，一般来说，简单的函数（如main和bar）的栈帧比较小都只有16个字节。这是因为对于函数来说，栈的作用在于保存进入时的现场、函数中被使用的寄存器，以及函数的局部变量。对于简单的函数而言，其使用的寄存器较少，同时也没啥局部变量，这些因素就导致了较小的栈帧。另外，这个函数调用过程中比较有趣的是ra和fp两个寄存器。ra寄存器指向函数的返回地址，一般会在函数入口处入栈。但是对于bar函数来说，因为它是叶子函数（leaf function）处于函数调用的最后一级，所以就无需将ra寄存器入栈。fp寄存器则指向上一级函数的栈帧，函数在入口处都需要将它存入栈中，因为只有这样函数才能够找到来时的路，在返回时做到有路可走。
 
@@ -364,9 +368,9 @@ riscv64-unknown-elf-objdump -D ./test | less
 
 实际上，RISC-V指令集的设计综合考虑了从微型嵌入式设备到云服务器的多种应用场合，根据应用场合的不同，就出现了多种特权级的组合。例如，对于简单的嵌入式设备（例如我们的U盘控制器）只设计机器模式（M）就足够了；对于有安全性考虑的嵌入式设备（例如车辆的中控、路由器等），则需要搭配机器模式和用户模式的组合（M+U）；对于通用计算机（例如台式电脑、手机，以及云服务器），由于需要运行通用操作系统，则需要机器模式、监管模式以及用户模式的组合（M+S+U）。由于本书的主题是操作系统，在以后的实验中我们将假设我们的RISC-V计算机采用了M+S+U的组合。
 
- 
+ <img src="pictures/fig1_3.png" alt="fig1_3" style="zoom:80%;" />
 
-图1.4 RISC-V机器的特权模式与特权级转换
+图1.3 RISC-V机器的特权模式与特权级转换
 
 通过《操作系统原理》课我们知道，**现代的处理器定义不同特权级的根本原因，是为了对操作系统进行保护**。例如，让操作系统运行在较高的特权模式，而用户代码则运行在较低的特权模式，以防止用户态代码执行恶意的动作破坏操作系统。然而，用户态的代码在它的生命周期里往往会要求做一些“合法”的特权模式行为（例如进行I/O，典型例子如常用的printf函数），这就意味着处理器同时需要支持特权模式的转换（control transfer）。在RISC-V处理器中，实现这种特权模式转换的工具就是中断，当执行在低特权模式的代码被中断时，处理器将进入更高特权模式执行中断处理例程来处理打断（低特权）代码执行的事件。中断处理完成后，处理器将从高特权模式返回低特权模式。这里的中断有时被称为异常或系统调用，我们将在1.4节详细讨论中断的分类、相关术语和处理过程。需要注意的是，RISC-V处理器可以实现跨特权模式的转换，例如从U模式直接进入M模式，或者从M模式返回U模式，这些转换的发生都取决于机器的状态寄存器的设置。
 
@@ -393,9 +397,9 @@ RISC-V为每一种特权模式定义了一组寄存器，用于控制机器的�
 
 表1.3中的寄存器很多只是存放了一个指向内存地址的指针（如mscratch、mtvec、mepc），相对简单；而mcause、mtval、mideleg以及medeleg都与中断处理紧密相关，我们将在1.4节讨论中断时再对它们的作用进行讨论。M模式的CSR中比较特殊的是mstatus，它存放了机器的状态，其结构如下图所示：
 
- 
+ ![fig1_4](D:\smallwork\pke-doc\pictures\fig1_4.png)
 
-图1.5 mstatus寄存器结构
+图1.4 mstatus寄存器结构
 
 以下是对mstatus中各个位的说明：
 
@@ -440,13 +444,13 @@ SUM（permit Supervisor User Memory access）位用于控制S模式下的虚拟�
 
 这些寄存器的长度实际上取决于M模式下mstatus寄存器中的SXL位的值。但为了简化后续讨论，我们仍假设它们的长度为64位。
 
-比较表1.3和1.4，我们发现S模式下的CSR和M模式下的CSR是一一对应的。实际上，它们的作用也是一一对应的关系，不同的地方在于S模式的特权级别比M模式稍低，这也体现在状态寄存器sstatus上，它的结构如图1.6所示：
+比较表1.3和1.4，我们发现S模式下的CSR和M模式下的CSR是一一对应的。实际上，它们的作用也是一一对应的关系，不同的地方在于S模式的特权级别比M模式稍低，这也体现在状态寄存器sstatus上，它的结构如图1.5所示：
 
- 
+ ![fig1_5](pictures/fig1_5.png)
 
-图1.6 sstatus寄存器
+图1.5 sstatus寄存器
 
-相比于图1.5中的mstatus，图1.6中的sstatus像是一个“缩水”版的mstatus。sstatus中与mstatus相同的位具有与mstatus模式中相同的作用（见1.3.1节中的讨论），如UIE和SIE的作用仍然是控制是否允许在U模式或S模式处理中断，UPIE和SPIE仍然是发挥保存UIE和SIE位的作用，等等。除sstatus外，scause、stval、sideleg以及sedeleg的作用也与M模式下对应的mcause、mtval、mideleg以及medeleg类似，对它们的讨论也放在1.4节。
+相比于图1.4中的mstatus，图1.5中的sstatus像是一个“缩水”版的mstatus。sstatus中与mstatus相同的位具有与mstatus模式中相同的作用（见1.3.1节中的讨论），如UIE和SIE的作用仍然是控制是否允许在U模式或S模式处理中断，UPIE和SPIE仍然是发挥保存UIE和SIE位的作用，等等。除sstatus外，scause、stval、sideleg以及sedeleg的作用也与M模式下对应的mcause、mtval、mideleg以及medeleg类似，对它们的讨论也放在1.4节。
 
 相应的，RISC-V处理器在U模式也定义了如表1.3或表1.4的一套CSR。U模式下CSR的作用也跟M模式或S模式类似，只是U模式是最低特权级模式，它们的作用比M或S模式下对应的CSR更简单。我们的PKE实验并未用到U模式下的CSR，所以我们不再对它们进行讨论。
 
@@ -484,11 +488,11 @@ SUM（permit Supervisor User Memory access）位用于控制S模式下的虚拟�
 
 实际系统中导致中断发生的事件往往是比较复杂的，它们的来源、处理时机和返回方式都不尽相同。为了便于读者对中断的理解以及表达的准确性，我们借鉴参考文献[SiFive Interrupt]的中断分类标准，将系统中发生的可能中断当前执行程序的事件分为3类：
 
-● **Exception**（异常）：这类中断是处理器在执行某条指令时，由于条件不满足而产生的。典型的异常有除零错误、缺页、执行当前特权级不支持的指令等。**相对于正在执行的程序而言，****exception****是同步（****synchronous****）发生的。****exception****产生的时机是指令执行的过程中（即处理器流水线的执行阶段），在****exception****处理完毕后，系统将返回发生****exception****的那条指令重新执行**。
+● **Exception**（异常）：这类中断是处理器在执行某条指令时，由于条件不满足而产生的。典型的异常有除零错误、缺页、执行当前特权级不支持的指令等。**相对于正在执行的程序而言，exception是同步（synchronous）发生的。exception产生的时机是指令执行的过程中（即处理器流水线的执行阶段），在exception处理完毕后，系统将返回发生exception的那条指令重新执行**。
 
-● **Trap**（即我们通常理解的“系统调用”或者“软件中断”，但是我们不建议把它翻译为“陷阱”！因为“陷阱”这个词在中文语境的含义甚至和“中断”一样宽泛。RISC-V中trap等同于syscall）：这类中断是当前执行的程序主动发出的ecall指令（类似8086中的int指令）导致的。典型的trap有屏幕输出（printf）、磁盘文件读写（read/write）等，这些高级语言函数调用通过系统函数库（libc）的转换，在RISC-V平台都会转换成ecall指令。**与****exception****类似，相对于正在执行的程序而言，****trap****也是同步（****synchronous****）发生的。但与****exception****不同的地方在于，****trap****在处理完成后返回的是下一条指令。**
+● **Trap**（即我们通常理解的“系统调用”或者“软件中断”，但是我们不建议把它翻译为“陷阱”！因为“陷阱”这个词在中文语境的含义甚至和“中断”一样宽泛。RISC-V中trap等同于syscall）：这类中断是当前执行的程序主动发出的ecall指令（类似8086中的int指令）导致的。典型的trap有屏幕输出（printf）、磁盘文件读写（read/write）等，这些高级语言函数调用通过系统函数库（libc）的转换，在RISC-V平台都会转换成ecall指令。**与exception类似，相对于正在执行的程序而言，trap也是同步（synchronous）发生的。但与exception不同的地方在于，trap在处理完成后返回的是下一条指令。**
 
-● **Interrupt**（我们不建议对它进行任何形式的翻译！因为“中断”在中文语境中的含义过于宽泛）：这类中断一般是由外部设备产生的事件而导致的。在Intel的x86系列处理器中，interrupt也被称为IRQ（Interrupt ReQuest）。典型的interrupt有：可编程时钟计时器（PIT）所产生的timer事件、DMA控制器发出的I/O完成事件、声卡发出的缓存空间用完事件等。**相对于正在执行的程序而言，****interrupt****是异步（****asynchronous****）发生的。另外，对于处理器流水线而言，****interrupt****的处理时机是指令的间隙。不同于****exception****但与****trap****类似，****interrupt****在处理完成后返回的是下一条指令**。
+● **Interrupt**（我们不建议对它进行任何形式的翻译！因为“中断”在中文语境中的含义过于宽泛）：这类中断一般是由外部设备产生的事件而导致的。在Intel的x86系列处理器中，interrupt也被称为IRQ（Interrupt ReQuest）。典型的interrupt有：可编程时钟计时器（PIT）所产生的timer事件、DMA控制器发出的I/O完成事件、声卡发出的缓存空间用完事件等。**相对于正在执行的程序而言，interrupt是异步（asynchronous）发生的。另外，对于处理器流水线而言，interrupt的处理时机是指令的间隙。不同于exception但与trap类似，interrupt在处理完成后返回的是下一条指令**。
 
 表1.6 中断的分类
 
@@ -582,39 +586,25 @@ SUM（permit Supervisor User Memory access）位用于控制S模式下的虚拟�
 
 典型的中断处理流程如以下代码：
 
+```
 .align 6
-
 .global handler_interrupt
-
 handler_interrupt:
-
 addi sp, sp, -32*REGBYTES
-
 STORE x1, 1* REGBYTES(sp)
-
 STORE x2, 2* REGBYTES(sp)
-
 ...
-
 STORE x31, 31* REGBYTES(sp)
-
 //call C code handler
-
 call software_handler
-
 //finished interrupt handling, ready to return
-
 LOAD x1, 1* REGBYTES(sp)
-
 LOAD x2, 2* REGBYTES(sp)
-
 ...
-
 LOAD x31, 31* REGBYTES(sp)
-
 addi sp, sp, 32*REGBYTES
-
 mret
+```
 
 在以上的代码中，中断例程将首先对通用寄存器进行保存（x0因为是硬件零，没有保存的价值），接下来调用由C语言编写的中断处理函数“software_handler”，在处理函数执行完毕后恢复通用寄存器的值，并调用mret（S模式下对应sret）指令返回。
 
@@ -636,9 +626,10 @@ RISC-V在中断处理上有一个很有意思的设计，就是可以将系统�
 
 例如，我们的PKE代码中，有以下的等效代码：
 
+```
 csrw mideleg, 1<<1 | 1<<5 | 1<<9
-
 csrw medeleg, 1<<0 | 1<< 3 | 1<<8 | 1<<12 | 1<<13 | 1<<15 
+```
 
 这段代码的作用是将M模式中interrupt中的1、5和9号，分别对应Supervisor software interrupt，Supervisor timer interrupt和Supervisor external interrupt代理出去，到S模式处理；再将M模式中的exception（或trap）中的0、3、8、12、13和15号，分别对应Instruction address misaligned，调试中断Breakpoint（3号），用户态系统调用Environment call from U-mode（8号），缺页或访存异常（12、13和15号）代理出去，到S模式处理。实际上，将这些重要的中断代理出去后，系统中产生的绝大部分中断事件将都在S模式处理。所以，在其后的PKE实验中，读者主要跟U模式以及S模式的代码打交道，除启动过程和一些简单的设置（如访存、中断代理等），实验也基本不涉及M模式的代码。
 
@@ -658,7 +649,7 @@ csrw medeleg, 1<<0 | 1<< 3 | 1<<8 | 1<<12 | 1<<13 | 1<<15
 
 接下来我们来讨论逻辑地址。对于Sv39而言，该虚存管理方案实际上只用到了64位中的39位（是的，也没有用到全部64位，不过相信读者理解了VMM的原理就能明白为什么无论是物理地址还是逻辑地址都未用满64位了）！有了这个数字，我们就可以计算出逻辑地址空间的大小为：2^39B=512GB，这意味着我们写的程序最大可以写到512GB！当然，这个数字对于我们在实验中所写的小程序没有什么意义（我们写的hello world之类的小程序，逻辑地址空间只有几个KB），但是这个数字对于大型游戏软件、以及部分大数据处理软件是有足够吸引力的，这其实也是为什么计算机工业“义无反顾”地抛弃32位去拥抱64位的根本原因！通过以上的讨论，我们发现一个有趣的现象，那就是：
 
-逻辑地址空间大小 ≠ 物理地址空间大小
+**逻辑地址空间大小 ≠ 物理地址空间大小**
 
 应该来说，这个现象对于今天广泛存在的64位系统，已经是一个司空见惯的现象了。同理，对于Sv48而言，其逻辑地址的长度是48位，跟物理地址长度的56位也不等长。
 
@@ -668,21 +659,21 @@ csrw medeleg, 1<<0 | 1<< 3 | 1<<8 | 1<<12 | 1<<13 | 1<<15
 
 我们来分析Sv39虚存管理方案中逻辑地址到物理地址的转换。由于Sv39是一个页式虚存管理方法，我们首先需要搞清楚的问题就是页面（包括虚页virtual page和实页physical page）的大小。对于Sv39而言（实际上，包括Sv48），其基础页面大小是4KB。实际上Sv39也支持更大的页面，例如2MB的兆页（megapage）和1GB的吉页（gigapage），这些我们将在弄明白页式地址变换后讨论，现阶段读者可以只考虑4KB的基础页。
 
-接下来，我们对39位的逻辑地址进行“切分”，如图1.7所示
+接下来，我们对39位的逻辑地址进行“切分”，如图1.6所示
 
- 
+ ![fig1_6](pictures/fig1_6.png)
 
-图1.7 Sv39中逻辑地址的结构
+图1.6 Sv39中逻辑地址的结构
 
-从图1.7中，我们看到逻辑地址在切分后，从左到右依次的分布是：12位的page offset（即页内偏移）、9位的一级虚页号VPN[0]（Virtual Page Number）、9位的二级虚页号VPN[1]（Virtual Page Number）、9位的三级虚页号VPN[0]（Virtual Page Number）。其中的一级虚页号又常被称为页表（Page Table，简写为PT）编号，而二级和三级虚页号又常分别被称为页目录（Page Directory，简写为PD）和根目录编号。
+从图1.6中，我们看到逻辑地址在切分后，从左到右依次的分布是：12位的page offset（即页内偏移）、9位的一级虚页号VPN[0]（Virtual Page Number）、9位的二级虚页号VPN[1]（Virtual Page Number）、9位的三级虚页号VPN[0]（Virtual Page Number）。其中的一级虚页号又常被称为页表（Page Table，简写为PT）编号，而二级和三级虚页号又常分别被称为页目录（Page Directory，简写为PD）和根目录编号。
 
-页内偏移为12位，这很容易理解：因为我们的基础页的大小是4KB的，其地址长度就是12位。但是，为什么我们的VPN都是9位的呢？这是因为我们的页表（或者页目录）是需要保存在内存（物理）页面中的，而4KB大小的基础页能够保存的页表项（Page Table Entry，简称为PTE）或页目录项（Page Directory Entry，简称为PDE）的个数是512（=2^9）个！为了讲清楚这个问题，我们需要进一步观察图1.8中PTE或PDE的格式。
+页内偏移为12位，这很容易理解：因为我们的基础页的大小是4KB的，其地址长度就是12位。但是，为什么我们的VPN都是9位的呢？这是因为我们的页表（或者页目录）是需要保存在内存（物理）页面中的，而4KB大小的基础页能够保存的页表项（Page Table Entry，简称为PTE）或页目录项（Page Directory Entry，简称为PDE）的个数是512（=2^9）个！为了讲清楚这个问题，我们需要进一步观察图1.7中PTE或PDE的格式。
 
- 
+ ![fig1_7](pictures/fig1_7.png)
 
-图1.8 Sv39中PDE/PTE格式
+图1.7 Sv39中PDE/PTE格式
 
-对图1.8中PDE/PTE格式的解释：
+对图1.7中PDE/PTE格式的解释：
 
 ● V（Valid）位决定了该PDE/PTE是否有效（V=1时有效），即是否有对应的实页。
 
@@ -700,17 +691,17 @@ csrw medeleg, 1<<0 | 1<< 3 | 1<<8 | 1<<12 | 1<<13 | 1<<15
 
 ● PPN（44位）是物理页号（Physical Page Number，简写为PPN）。
 
-图1.8的PDE/PTE格式中有一个很重要的问题：为什么里面的PPN是44位的呢？通过1.5.1小节的介绍，我们知道目前阶段的RV64G处理器实际使用的物理内存地址是56个位，而这个2^56B的物理地址空间可以看成是多少个4KB的基础物理页呢？答案是2^(56-12)=2^44个！也就是PPN实际上就是我们在操作系统原理课中所学习到的“物理块号”，一个物理页编号而已，但如果我们知道一个物理页的编号，它的（64位）起始地址我们就可以通过将其低12位和高8位添加0而得到。
+图1.7的PDE/PTE格式中有一个很重要的问题：为什么里面的PPN是44位的呢？通过1.5.1小节的介绍，我们知道目前阶段的RV64G处理器实际使用的物理内存地址是56个位，而这个2^56B的物理地址空间可以看成是多少个4KB的基础物理页呢？答案是2^(56-12)=2^44个！也就是PPN实际上就是我们在操作系统原理课中所学习到的“物理块号”，一个物理页编号而已，但如果我们知道一个物理页的编号，它的（64位）起始地址我们就可以通过将其低12位和高8位添加0而得到。
 
-在知道Sv39的逻辑地址结构以及PDE/PTE格式后，我们就能够理解Sv39的逻辑地址到物理地址的变换过程了，这个过程如图1.9所示：
+在知道Sv39的逻辑地址结构以及PDE/PTE格式后，我们就能够理解Sv39的逻辑地址到物理地址的变换过程了，这个过程如图1.8所示：
 
- 
+ ![fig1_8](pictures/fig1_8.png)
 
-图1.9 Sv39中虚拟地址到物理地址的转换过程
+图1.8 Sv39中虚拟地址到物理地址的转换过程
 
 地址变换机构首先获得逻辑地址va的VPN[2]，在页目录的根目录（根目录的地址由satp寄存器保存）中查找对应的PDE，依此得知以及页目录的PPN；进而找到页目录实际存储的基础物理页，再根据逻辑地址中的VPN[1]取得页目录内对应的PDE；接着找到页表实际存储的基础物理页，再根据逻辑地址中的VPN[0]取得页表内的PTE，最后获得给定虚拟地址的物理地址对应的PPN，再将PPN和虚拟地址中的page offset进行移位相加，最终得到物理地址pa。
 
-**需要注意的是，图****1.9****中所示的地址变换过程是由****RISC-V****处理器硬件完成的，但是页表的构造却是操作系统完成的！**对于系统中运行的每个进程（操作系统本身也可以看作是一个特殊的进程），都应该有个一页表与其对应，当处理器需要执行某个进程时，就应该将satp指向想要执行的进程。另外，对于一个进程而言（例如我们的hello world程序），它可能用不满全部虚拟地址空间（Sv39的虚拟地址空间高达512GB！），这种情况下它的页表中可能只有非常少部分的PDE/PTE是有效的（V位为1），而其他PDE/PTE并不指向任何物理内存页面。
+**需要注意的是，图1.8中所示的地址变换过程是由RISC-V处理器硬件完成的，但是页表的构造却是操作系统完成的！**对于系统中运行的每个进程（操作系统本身也可以看作是一个特殊的进程），都应该有个一页表与其对应，当处理器需要执行某个进程时，就应该将satp指向想要执行的进程。另外，对于一个进程而言（例如我们的hello world程序），它可能用不满全部虚拟地址空间（Sv39的虚拟地址空间高达512GB！），这种情况下它的页表中可能只有非常少部分的PDE/PTE是有效的（V位为1），而其他PDE/PTE并不指向任何物理内存页面。
 
 将一个进程的（部分）地址空间“共享”给另一个进程，是操作系统中的常规操作，例如将操作系统本身的地址空间部分开放给某用户进程。有了页表的帮助，这种共享也非常便捷，例如我们可以把某用户进程的PDE指向操作系统的PD或PT。但是，这种共享必须考虑到权限问题！例如，将用户进程的PDE或PTE中的权限位进行相应的设置，避免对操作系统代码可能的破坏（如不允许写或执行）。由于页面权限的限制，用户进程的执行可能会碰到访存方面的exception，如访问某个V=0的页面（缺页异常），或者执行X=0的页中的代码，这些exception都会导致当前程序的中断，并进入更高特权级（如PKE操作系统运行的S模式）中处理。
 
@@ -718,11 +709,11 @@ csrw medeleg, 1<<0 | 1<< 3 | 1<<8 | 1<<12 | 1<<13 | 1<<15
 
 **1.5.3 satp、Sv48、TLB和非基础页**
 
-在图1.9的虚拟地址变换中，一个重要的寄存器是satp，它的结构如图1.10所示。
+在图1.8的虚拟地址变换中，一个重要的寄存器是satp，它的结构如图1.9所示。
 
- 
+ ![fig1_9](pictures/fig1_9.png)
 
-图1.10 satp寄存器格式
+图1.9 satp寄存器格式
 
 satp寄存器包含一个44位的PPN，它指向了一个页表的根目录所存储的基础页；一个ASID（Address Space IDentifier），用于标识一个地址空间，当发生地址空间的切换时系统将需要调用SFENCE.VMA指令来刷新地址变换机构，如TLB（Translation Lookaside Buffer，即原理课所讲的“快表”），我们将在后续讨论中介绍TLB和SFENCE.VMA指令；和一个4位的模式MODE，表1.8列出了模式域可能的取值及含义。
 
@@ -748,91 +739,89 @@ satp寄存器包含一个44位的PPN，它指向了一个页表的根目录所�
 
 PKE的实验将涉及Linux环境下较多工具软件的使用，以下列出一些我们认为比较重要的工具软件，并简要介绍其使用方法。详细的使用方法，希望读者通过阅读其使用手册进一步掌握。
 
- 
-
-● git
+ ● git
 
 git是一个开源的分布式版本控制系统，对于一个本地仓库，你可以使用如下命令创建：
 
-git init
+`$git init`
 
 对已存在文件进行版本控制
 
-git add *.c
+`$git add *.c`
 
-git add LICENSE
+`$git add LICENSE`
 
-git commit -m 'Initial project version'
+`$git commit -m 'Initial project version'`
 
 对于一个远程的git仓库，你想要把代码克隆到本地，需要使用git clone命令
 
-git clone url
+`$git clone url`
 
 当clone完成，你就会有本地的工作目录，进入该目录，每个文件都有两种状态：tracked or untracked。已跟踪的文件是指那些被纳入了版本控制的文件，在上一次快照中有它们的记录，在工作一段时间后，它们的状态可能是未修改，已修改或已放入暂存区。简而言之，已跟踪的文件就是 git 已经知道的文件。其状态转换如图：
 
- 
+ <img src="pictures/fig1_10.png" alt="fig1_10" style="zoom:60%;" />
 
-图1.11 git仓库中文件的状态转换
+图1.10 git仓库中文件的状态转换
 
 使用git status可以查看目录下的文件状态
 
-$ git status
+`$ git status`
 
 使用add命令可以递归地跟踪该目录下的所有文件、或暂存已修改的文件
 
-$ git add fileName/directory
+`$ git add fileName/directory`
 
 使用commit命令可以提交更新
 
-$ git commit -m "commit information"
+`$ git commit -m "commit information"`
 
 ◇ 分支相关命令
 
 查看分支：
 
-$ git branch
+`$ git branch`
 
 本地创建远端分支dev（dev为分支名，下同）：
 
-$ git checkout -b dev origin/de
+`$ git checkout -b dev origin/de`
 
 合并分支dev：
 
-$ git merge dev
+`$ git merge dev`
 
 本地删除分支dev：
 
-$ git branch -D/d dev
+`$ git branch -D/d dev`
 
 切换到已有分支dev：
 
-$ git checkout dev
+`$ git checkout dev`
 
 本地创建并切换到分支dev：
 
-$ git checkout -b dev
+`$ git checkout -b dev`
 
 推送分支dev到远端：
 
-$ git push origin
+`$ git push origin`
 
 ◇ 调试相关命令
 
-$ git log
+`$ git log`
 
 显示每次提交提交日期的差异，-2选项来只显示最近的2次提交：
 
-$ git log -p -2
+`$ git log -p -2`
 
 每次提交的简略统计信息：
 
-$ git log --stat
+`$ git log --stat`
 
 格式化log输出：
 
-$ git log --pretty=oneline [short、full、fuller]//用一行显示每一次提交
+`$ git log --pretty=oneline [short、full、fuller]//用一行显示每一次提交`
 
-$ git log --pretty=format:"%h - %an, %ar : %s"
+`$ git log --pretty=format:"%h - %an, %ar : %s"`
 
  
 
@@ -854,19 +843,19 @@ $ git log --pretty=format:"%h - %an, %ar : %s"
 
 \1. -o选项指定输出文件名称为hello
 
-$ riscv64-unknown-elf-gcc  hello.cpp  -o hello
+`$ riscv64-unknown-elf-gcc  hello.cpp  -o hello`
 
 \2. 使用-E选项，输出预处理阶段的hello.i文件
 
-$ riscv64-unknown-elf-gcc -E hello.cpp  -o hello.i
+`$ riscv64-unknown-elf-gcc -E hello.cpp  -o hello.i`
 
 \3. 使用-S选项，输出编译阶段的hello.s文件
 
-$ riscv64-unknown-elf-gcc -S hello.cpp -o hello.s
+`$ riscv64-unknown-elf-gcc -S hello.cpp -o hello.s`
 
 \4. 使用-c选项，输出二进制文件hello.o
 
-$ riscv64-unknown-elf-gcc -c hello.s  -o hello.o
+`$ riscv64-unknown-elf-gcc -c hello.s  -o hello.o`
 
  
 
@@ -884,77 +873,53 @@ $ riscv64-unknown-elf-gcc -c hello.s  -o hello.o
 
 \1. 查看对象文件所有的节sections.
 
-$riscv64-unknown-elf-objdump -h  elf_file 
+`$riscv64-unknown-elf-objdump -h  elf_file` 
 
 输出如下：
 
+```
 hello_elf:   file format elf64-littleriscv
 
- 
-
 Sections:
-
 Idx Name     Size   VMA        LMA        File off Algn
-
  0 .text     000024cc 00000000000100b0 00000000000100b0 000000b0 2**1
-
 ​         CONTENTS, ALLOC, LOAD, READONLY, CODE
-
  1 .rodata    0000000a 0000000000012580 0000000000012580 00002580 2**3
-
 ​         CONTENTS, ALLOC, LOAD, READONLY, DATA
-
  2 .eh_frame   00000004 000000000001358c 000000000001358c 0000258c 2**2
-
 ​         CONTENTS, ALLOC, LOAD, DATA
-
  3 .init_array  00000010 0000000000013590 0000000000013590 00002590 2**3
-
 ​         CONTENTS, ALLOC, LOAD, DATA
-
  4 .fini_array  00000008 00000000000135a0 00000000000135a0 000025a0 2**3
-
 ​         CONTENTS, ALLOC, LOAD, DATA
-
  5 .data     00000f58 00000000000135a8 00000000000135a8 000025a8 2**3
-
 ​         CONTENTS, ALLOC, LOAD, DATA
-
  6 .sdata    00000040 0000000000014500 0000000000014500 00003500 2**3
-
 ​         CONTENTS, ALLOC, LOAD, DATA
-
  7 .sbss     00000020 0000000000014540 0000000000014540 00003540 2**3
-
 ​         ALLOC
-
  8 .bss     00000068 0000000000014560 0000000000014560 00003540 2**3
-
 ​         ALLOC
-
  9 .comment   00000011 0000000000000000 0000000000000000 00003540 2**0
-
 ​         CONTENTS, READONLY
-
  10 .riscv.attributes 00000035 0000000000000000 0000000000000000 00003551 2**0
-
 ​         CONTENTS, READONLY
+```
 
 可以看得一个section在文件中对应的属性有六个，其中name为section的名字，size为section的大小，VMA为该section期望从中执行的内存地址，LAM为加载到内存的内存地址，File off为该section在文件中的偏移量，algn则为字节对齐。
 
 \2. 显示文件的摘要信息，包括start address
 
-$riscv64-unknown-elf-objdump -f elf_file 
+`$riscv64-unknown-elf-objdump -f elf_file` 
 
 例如我们使用：riscv64-unknown-elf-objdump -f hello_elf，输出如下：
 
+```
 hello_elf:   file format elf64-littleriscv
-
 architecture: riscv:rv64, flags 0x00000112:
-
 EXEC_P, HAS_SYMS, D_PAGED
-
 start address 0x00000000000100c2
+```
 
  
 
@@ -964,7 +929,7 @@ start address 0x00000000000100c2
 
 编译汇编源文件到目标文件，例如：
 
-$ riscv64-unknown-elf-as hello.S -o hello.o
+`$ riscv64-unknown-elf-as hello.S -o hello.o`
 
  
 
@@ -974,11 +939,13 @@ $ riscv64-unknown-elf-as hello.S -o hello.o
 
 file命令用于辨识文件类型，例如：
 
-$ file app/elf/app1
+`$ file app/elf/app1`
 
 我们将看到以下输出：
 
+```
 app/elf/app1: ELF 64-bit LSB executable, UCB RISC-V, version 1 (SYSV), statically linked, with debug_info, not stripped
+```
 
 表明app/elf/app1文件是一个可执行的二进制代码（ELF）文件，采用了RISC-V指令集且为静态链接所生成。
 
@@ -996,21 +963,23 @@ app/elf/app1: ELF 64-bit LSB executable, UCB RISC-V, version 1 (SYSV), staticall
 
 spike是RISC-V仿真器，我们将需要使用它结合pke运行我们的二进制程序，例如：
 
-$ spike pke  helloworld
+`$ spike pke  helloworld`
 
 得到输出如下：
 
+```
 Hello World! 
+```
 
 spike默认提供的内存为2048MiB，使用-m选项可以指定内存大小（单位是MiB），例如：
 
-$ spike -m1024  pke  helloworld
+`$ spike -m1024  pke  helloworld`
 
 就可以将模拟出来的RISC-V机器的内存大小指定为1024MiB。
 
 RISC-V是一个可扩展指令集，spike默认支持的ISA为RV64IMAFDC，我们可以通过--isa选项设置模拟出来的机器的ISA，例如：
 
-$ spike --isa=RV64GCV  pke  helloworld
+`$ spike --isa=RV64GCV  pke  helloworld`
 
 我们将目标机器的ISA指定为RV64GCV。
 
