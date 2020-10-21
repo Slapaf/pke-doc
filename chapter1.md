@@ -328,7 +328,7 @@ RISC-V为每一种特权模式定义了一组寄存器，用于控制机器的�
 
 表1.3中的寄存器很多只是存放了一个指向内存地址的指针（如mscratch、mtvec、mepc），相对简单；而mcause、mtval、mideleg以及medeleg都与中断处理紧密相关，我们将在1.4节讨论中断时再对它们的作用进行讨论。M模式的CSR中比较特殊的是mstatus，它存放了机器的状态，其结构如下图所示：
 
- ![fig1_4](D:\smallwork\pke-doc\pictures\fig1_4.png)
+ ![fig1_4](pictures/fig1_4.png)
 
 图1.4 mstatus寄存器结构
 
