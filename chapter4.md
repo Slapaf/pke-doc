@@ -57,23 +57,17 @@
 
 构建了物理内存页管理器框架：struct pmm_manager结构如下：
 
+```
 135     const struct pmm_manager default_pmm_manager = {
-
 136       .name = "default_pmm_manager",
-
 137       .init = default_init,
-
 138       .init_memmap = default_init_memmap,
-
 139       .alloc_pages = default_alloc_pages,
-
 140       .free_pages = default_free_pages,
-
 141       .nr_free_pages = default_nr_free_pages,
-
 142       .pmm_check = basic_check,
-
 143     };
+```
 
 默认的内存管理器有如下属性：
 
@@ -95,27 +89,22 @@ l pmm_check ：检查校验函数
 
 first_fit分配算法需要维护一个查找有序（地址按从小到大排列）空闲块（以页为最小单位的连续地址空间）的数据结构，而双向链表是一个很好的选择。pk/list.h定义了可挂接任意元素的通用双向链表结构和对应的操作，所以需要了解如何使用这个文件提供的各种函数，从而可以完成对双向链表的初始化/插入/删除等。
 
- 
-
 ​    
 
 你可以使用python脚本检查你的输出：
 
-./pke-lab3
+`./pke-lab3`
 
 若得到如下输出，那么恭喜你，你已经成功完成了实验三！！！
 
+```
 build pk : OK
-
 running app3 m2048 : OK
-
  test3_m2048 : OK
-
 running app3 m1024 : OK
-
  test3_m1024 : OK
-
 Score: 20/20 
+```
 
 ### 4.2 基础知识
 
@@ -125,9 +114,10 @@ Score: 20/20
 
 在riscv中，内存地址是从0x80000000 开始的。在pke的连接文件pke.lds中，我们可以看到这样两行：
 
+```
 14  /* Begining of code and text segment */
-
 15  . = 0x80000000;
+```
 
 至于内存的大小，还记得实验二中的-m选项吗？spike模拟器可以通过-m选项配置物理内存的大小。
 
