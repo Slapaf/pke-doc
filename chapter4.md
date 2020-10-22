@@ -125,6 +125,7 @@ Score: 20/20
 
 其次，我们现在管理的可用内存是那一部分? 代理内核的本质也是一段程序，他本身是需要内存空间的，而这一段空间自然不能再被分配。除去内核本身占的空间，内核可支配的物理空间从0x80016000开始，大小在PKE设定为8M，2048个页面，故而供内核支配的的内存的范围为（first_free_page~first_free_paddr）。如下图所示。
 
+```
 KERNTOP------->+---------------------------------+ 0x80816000
 
 (first_free_paddr)  |                 |
@@ -166,22 +167,20 @@ kernel/user
 ​         |                 |  
 
 first_free_paddr->+------------------------------------------------------+ 0x80816000
+```
 
  
 
 最后，我们来看物理内存分配的单位：操作系统中，物理页是物理内存分配的基本单位。一个物理页的大小是4KB，我们使用结构体Page来表示，其结构如图：
 
+```
 struct Page {
-
   sint_t ref;          
-
   uint_t flags;        
-
   uint_t property;     
-
   list_entry_t page_link;   
-
 };
+```
 
 l ref表示这样页被页表的引用记数
 
@@ -193,11 +192,11 @@ l page_link是维持空闲物理页链表的重要结构。
 
 Page结构体对应着物理页，我们来看Page结构体同物理地址之间是如何转换的。首先，我们需要先了解一下物理地址。
 
-​                               
+<img src="pictures/fig4_1.png" alt="fig4_1" style="zoom:80%;" />
 
-​    图4.1 RISCV64 物理地址
+图4.1 RISCV64 物理地址
 
-总的来说，物理地址分为两部分，页号（PPN）+offset
+总的来说，物理地址分为两部分：页号（PPN）和offset
 
 页号可以理解为物理页的编码，而offset则为页内偏移量。现在考虑一下12位的offset对应的内存大小是多少呢？
 
@@ -207,7 +206,9 @@ Page结构体对应着物理页，我们来看Page结构体同物理地址之间
 
 实际上在初始化空闲页链表之前，系统会定义一个Page结构体的数组，而链表的节点也正是来自于这些数组，这个数组的每一项代表着一个物理页，而且它们的数组下标就代表着每一项具体代表的是哪一个物理页，就如下图所示：
 
- 
+ <img src="pictures/fig4_2.png" alt="fig4_2" style="zoom:80%;" />
+
+
 
  
 
@@ -217,65 +218,43 @@ Page结构体对应着物理页，我们来看Page结构体同物理地址之间
 
    在PK的machine/minit.c中间中，便通过delegate_traps()，将部分中断及同步异常委托给S模式。（同学们可以查看具体是哪些中断及同步异常）
 
+```
  43     // send S-mode interrupts and most exceptions straight to S-mode
-
  44     static void delegate_traps()
-
  45     {
-
  46      if (!supports_extension('S'))
-
  47       return;
-
  48
-
  49      uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
-
  50      uintptr_t exceptions =
-
  51       (1U << CAUSE_MISALIGNED_FETCH) |
-
  52       (1U << CAUSE_FETCH_PAGE_FAULT) |
-
  53       (1U << CAUSE_BREAKPOINT) |
-
  54       (1U << CAUSE_LOAD_PAGE_FAULT) |
-
  55       (1U << CAUSE_STORE_PAGE_FAULT) |
-
  56       (1U << CAUSE_USER_ECALL);
-
  57
-
  58      write_csr(mideleg, interrupts);
-
  59      write_csr(medeleg, exceptions);
-
  60      assert(read_csr(mideleg) == interrupts);
-
  61      assert(read_csr(medeleg) == exceptions);
-
  62     }
+```
 
 ​    这里介绍一下RISCV的中断委托机制，在默认的情况下，所有的异常都会被交由机器模式处理。但正如我们知道的那样，大部分的系统调用都是在S模式下处理的，因此RISCV提供了这一委托机制，可以选择性的将中断交由S模式处理，从而完全绕过M模式。
 
 ​    接下，我们继续看S模式下的中断处理。在pk目录下的pk.c文件中的boot_loader函数中将&trap_entry写入了stvec寄存器中，stvec保存着发生异常时处理器需要跳转到的地址，也就是说当中断发生，我们将跳转至trap_entry，现在我们继续跟踪trap_entry。trap_entry在pk目录下的entry.S中，其代码如下：
 
+```
  60     trap_entry:
-
  61      csrrw sp, sscratch, sp
-
  62      bnez sp, 1f
-
  63      csrr sp, sscratch
-
  64     1:addi sp,sp,-320
-
  65      save_tf
-
  66      move a0,sp
-
  67      jal handle_trap
+```
 
 ​    在61行，交换了sp与sscratch的值，这里是为了根据sscratch的值判断该中断是来源于U模式还是S模式。
 
@@ -283,148 +262,87 @@ Page结构体对应着物理页，我们来看Page结构体同物理地址之间
 
 ​    接着在64,65行保存上下文，最后跳转至67行处理trap。handle_trap在pk目录下的handlers.c文件中，代码如下：
 
+```
 112     void handle_trap(trapframe_t* tf)
-
 113     {
-
 114      if ((intptr_t)tf->cause < 0)
-
 115       return handle_interrupt(tf);
-
 116
-
 117      typedef void (*trap_handler)(trapframe_t*);
-
 118
-
 119      const static trap_handler trap_handlers[] = {
-
 120       [CAUSE_MISALIGNED_FETCH] = handle_misaligned_fetch,
-
 121       [CAUSE_FETCH_ACCESS] = handle_instruction_access_fault,
-
 122       [CAUSE_LOAD_ACCESS] = handle_load_access_fault,
-
 123       [CAUSE_STORE_ACCESS] = handle_store_access_fault,
-
 124       [CAUSE_FETCH_PAGE_FAULT] = handle_fault_fetch,
-
 125       [CAUSE_ILLEGAL_INSTRUCTION] = handle_illegal_instruction,
-
 126       [CAUSE_USER_ECALL] = handle_syscall,
-
 127       [CAUSE_BREAKPOINT] = handle_breakpoint,
-
 128       [CAUSE_MISALIGNED_LOAD] = handle_misaligned_load,
-
 129       [CAUSE_MISALIGNED_STORE] = handle_misaligned_store,
-
 130       [CAUSE_LOAD_PAGE_FAULT] = handle_fault_load,
-
 131       [CAUSE_STORE_PAGE_FAULT] = handle_fault_store,
-
 132      };
+```
 
 ​    handle_trap函数中实现了S模式下各类中断的处理。可以看到，代码的126行就对应着系统调用的处理，handle_syscall的实现如下：
 
+```
 100     static void handle_syscall(trapframe_t* tf)
-
 101     {
-
 102      tf->gpr[10] = do_syscall(tf->gpr[10], tf->gpr[11], tf->gpr[12], tf->gpr[13],
-
 103                  tf->gpr[14], tf->gpr[15], tf->gpr[17]);
-
 104      tf->epc += 4;
-
 105     }
+```
 
 ​    还记得我们在例3.1中是将中断号写入x17寄存器嘛？其对应的就是这里do_syscall的最后一个参数，我们跟踪进入do_syscall函数，其代码如下：
 
+```
 313 long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, unsigned long n)
-
 314     {
-
 315      const static void* syscall_table[] = {
-
 316      // your code here:
-
 317      // add get_init_memsize syscall
-
 318       [SYS_init_memsize ] = sys_get_init_memsize,
-
 319       [SYS_exit] = sys_exit,
-
 320       [SYS_exit_group] = sys_exit,
-
 321       [SYS_read] = sys_read,
-
 322       [SYS_pread] = sys_pread,
-
 323       [SYS_write] = sys_write,
-
 324       [SYS_openat] = sys_openat,
-
 325       [SYS_close] = sys_close,
-
 326       [SYS_fstat] = sys_fstat,
-
 327       [SYS_lseek] = sys_lseek,
-
 328       [SYS_renameat] = sys_renameat,
-
 329       [SYS_mkdirat] = sys_mkdirat,
-
 330       [SYS_getcwd] = sys_getcwd,
-
 331       [SYS_brk] = sys_brk,
-
 332       [SYS_uname] = sys_uname,
-
 333       [SYS_prlimit64] = sys_stub_nosys,
-
 334       [SYS_rt_sigaction] = sys_rt_sigaction,
-
 335       [SYS_times] = sys_times,
-
 336       [SYS_writev] = sys_writev,
-
 337       [SYS_readlinkat] = sys_stub_nosys,
-
 338       [SYS_rt_sigprocmask] = sys_stub_success,
-
 339       [SYS_ioctl] = sys_stub_nosys,
-
 340       [SYS_getrusage] = sys_stub_nosys,
-
 341       [SYS_getrlimit] = sys_stub_nosys,
-
 342       [SYS_setrlimit] = sys_stub_nosys,
-
 343       [SYS_set_tid_address] = sys_stub_nosys,
-
 344       [SYS_set_robust_list] = sys_stub_nosys,
-
 345      };
-
 346
-
 347      syscall_t f = 0;
-
 348
-
 349      if (n < ARRAY_SIZE(syscall_table))
-
 350       f = syscall_table[n];
-
 351      if (!f)
-
 352       panic("bad syscall #%ld!",n);
-
 353
-
 354      return f(a0, a1, a2, a3, a4, a5, n);
-
 355     }
+```
 
 ​    do_syscall中通过传入的系统调用号n，查询syscall_table得到对应的函数，并最终执行系统调用。
