@@ -16,7 +16,7 @@ RISC-V交叉编译器是与Linux自带的GCC编译器类似的一套工具软件
 
 RISC-V交叉编译器的构建需要一些本地支撑软件包，可使用以下命令安装：
 
-`$ sudo apt-get install autoconf automake autotools-dev curl libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev`
+`$ sudo apt-get install autoconf automake autotools-dev curl libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev device-tree-compiler`
 
 ● 第二步，获取RISC-V交叉编译器的源代码
 
