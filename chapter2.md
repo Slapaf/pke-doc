@@ -24,13 +24,13 @@ RISC-V交叉编译器的构建需要一些本地支撑软件包，可使用以�
 
 `$ git clone --recursive https://github.com/riscv/riscv-gnu-toolchain.git`
 
-但由于RISC-V交叉编译器的仓库包含了Qemu模拟器的代码，下载后的目录占用的磁盘空间大小约为13GB，整体下载所需的时间较长。另一种方式是通过百度云盘，获取源代码压缩包，链接和提取码如下：
+但由于RISC-V交叉编译器的仓库包含了Qemu模拟器的代码，下载后的目录占用的磁盘空间大小约为4.8GB，整体下载所需的时间较长。另一种方式是通过百度云盘，获取源代码压缩包，链接和提取码如下：
 
 `链接: https://pan.baidu.com/s/1cMGt0zWhRidnw7vNUGcZhg 提取码: qbjh`
 
-从百度云盘下载riscv-gnu-toolchain.tar.zip.001和riscv-gnu-toolchain.tar.zip.002两个文件，解压zip文件后获得riscv-gnu-toolchain.tar.gz文件（大小约为4.8GB），再在Ubuntu环境下解压这个.tar.gz文件，采用如下命令行：
+从百度云盘下载riscv-gnu-toolchain-clean.tar.gz文件（大小为2.7GB），再在Ubuntu环境下解压这个.tar.gz文件，采用如下命令行：
 
-`$ tar xf  riscv-gnu-toolchain.tar.gz`
+`$ tar xf  riscv-gnu-toolchain-clean.tar.gz`
 
 之后就能够看到和进入当前目录下的riscv-gnu-toolchain文件夹了。
 
