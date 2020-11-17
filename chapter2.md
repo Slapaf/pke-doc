@@ -28,7 +28,7 @@ RISC-V交叉编译器的构建需要一些本地支撑软件包，可使用以�
 
 `链接: https://pan.baidu.com/s/1cMGt0zWhRidnw7vNUGcZhg 提取码: qbjh`
 
-从百度云盘下载riscv-gnu-toolchain-clean.tar.gz文件（大小为2.7GB），再在Ubuntu环境下解压这个.tar.gz文件，采用如下命令行：
+从百度云盘下载RISCV-packages/riscv-gnu-toolchain-clean.tar.gz文件（大小为2.7GB），再在Ubuntu环境下解压这个.tar.gz文件，采用如下命令行：
 
 `$ tar xf  riscv-gnu-toolchain-clean.tar.gz`
 
