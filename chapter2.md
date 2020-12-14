@@ -160,7 +160,7 @@ you need add your code!
 
 **2.2.1 练习一：hello world**
 
-   首先进入app目录下。我们先来编写一个简单的hello world程序，我们编写hellowrold.c源文件如下：
+   首先进入app目录下。我们先来编写一个简单的hello world程序，我们编写helloworld.c源文件如下：
 
 ```
  1 #include <stdio.h>
@@ -173,15 +173,15 @@ you need add your code!
  8 }
 ```
 
-例2.1 hellowrold.c
+例2.1 helloworld.c
 
-使用riscv64-unknown-elf-gcc编译该文件，得到的ELF文件hellowrold。
+使用riscv64-unknown-elf-gcc编译该文件，得到的ELF文件helloworld。
 
-`$riscv64-unknown-elf-gcc hellowrold.c -o elf/hellowrold`
+`$riscv64-unknown-elf-gcc helloworld.c -o elf/helloworld`
 
    现在回到上一级目录，使用pke来运行二进制文件：
 
-`$spike obj/pke app/elf/hellowrold`
+`$spike obj/pke app/elf/helloworld`
 
 ​    你可以得到以下输出：
 
