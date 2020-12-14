@@ -4,7 +4,9 @@
 
 实验环境我们推荐采用Ubuntu 16.04LTS或18.04LTS（x86_64）操作系统，我们未在其他系统（如arch，RHEL等）上做过测试，但理论上只要将实验中所涉及到的安装包替换成其他系统中的等效软件包，就可完成同样效果。另外，我们在EduCoder实验平台（网址：https://www.educoder.net ）上创建了本书的同步课程，课程的终端环境中已完成实验所需软件工具的安装，所以如果读者是在EduCoder平台上选择的本课程，则可跳过本节的实验环境搭建过程，直接进入通过终端（命令行）进入实验环境。
 
-PKE实验涉及到的软件工具有：RISC-V交叉编译器、spike模拟器，以及PKE源代码三个部分。假设读者拥有了Ubuntu 16.04LTS或18.04LTS（x86_64）操作系统的环境，以下分别介绍这三个部分的安装以及安装后的检验过程。需要说明的是，为了避免耗时耗资源的构建（build）过程，一个可能的方案是从https://toolchains.bootlin.com 下载，**但是要注意一些依赖包（如GCC）的版本号**。**我们强烈建议读者在新装环境中完整构建（build）RISC-V交叉编译器，以及spike模拟器**。如果强调环境的可移植性，可以考虑在虚拟机中安装完整系统和环境，之后将虚拟机进行克隆和迁移。
+PKE实验涉及到的软件工具有：RISC-V交叉编译器、spike模拟器，以及PKE源代码三个部分。假设读者拥有了Ubuntu 16.04LTS或18.04LTS（x86_64）操作系统的环境，以下分别介绍这三个部分的安装以及安装后的检验过程。需要说明的是，为了避免耗时耗资源的构建（build）过程，一个可能的方案是从https://toolchains.bootlin.com 下载，**但是要注意一些依赖包（如GCC）的版本号**。
+
+**我们强烈建议读者在新装环境中完整构建（build）RISC-V交叉编译器，以及spike模拟器**。如果强调环境的可移植性，可以考虑在虚拟机中安装完整系统和环境，之后将虚拟机进行克隆和迁移。
 
 #### 2.1.1 RISC-V交叉编译器
 
@@ -24,7 +26,7 @@ RISC-V交叉编译器的构建需要一些本地支撑软件包，可使用以�
 
 `$ git clone --recursive https://github.com/riscv/riscv-gnu-toolchain.git`
 
-但由于RISC-V交叉编译器的仓库包含了Qemu模拟器的代码，下载后的目录占用的磁盘空间大小约为4.8GB，整体下载所需的时间较长。另一种方式是通过百度云盘，获取源代码压缩包，链接和提取码如下：
+但由于RISC-V交叉编译器的仓库包含了Qemu模拟器的代码，下载后的目录占用的磁盘空间大小约为4.8GB，（从国内下载）整体下载所需的时间较长。为了方便国内用户，我们提供了另一种方式就是通过百度云盘获取源代码压缩包，链接和提取码如下：
 
 `链接: https://pan.baidu.com/s/1cMGt0zWhRidnw7vNUGcZhg 提取码: qbjh`
 
@@ -44,7 +46,7 @@ RISC-V交叉编译器的构建需要一些本地支撑软件包，可使用以�
 
 `$ make install`
 
-以上命令中，[your.RISCV.install.path]指向的是你的RISC-V交叉编译器安装目录。如果安装是你home目录下的一个子目录（如~/riscv-install-dir），则最后的make install无需sudoer权限。但如果安装目录是系统目录（如/opt/ riscv-install-dir），则需要sudoer权限（即在make install命令前加上sudo）。
+以上命令中，[your.RISCV.install.path]指向的是你的RISC-V交叉编译器安装目录。如果安装是你home目录下的一个子目录（如~/riscv-install-dir），则最后的make install无需sudoer权限。但如果安装目录是系统目录（如/opt/riscv-install-dir），则需要sudoer权限（即在make install命令前加上sudo）。
 
 ● 第四步，设置环境变量
 
@@ -179,7 +181,7 @@ you need add your code!
 
    现在回到上一级目录，使用pke来运行二进制文件：
 
-`$spike obj/pke app/elf/ hellowrold`
+`$spike obj/pke app/elf/hellowrold`
 
 ​    你可以得到以下输出：
 
@@ -194,9 +196,7 @@ CPU 运行到一些情况下会产生异常（exception） ，例如访问无效
 
 当发生中断或异常时，CPU 会立即跳转到一个预先设置好的地址，执行中断处理程序，最后恢复原程序的执行。这个地址。我们称为中断入口地址。在RISC-V中，设有专门的CSR寄存器保存这个地址，即stvec寄存器。
 
-下面，请你阅读pk.c文件，找出pk中设置中断入口函数的位置。
-
- 
+下面，请你阅读pk/pk.c文件，找出pk中设置中断入口函数的位置。
 
 **2.2.3 练习三：中断过程详究**
 
@@ -206,7 +206,7 @@ CPU 运行到一些情况下会产生异常（exception） ，例如访问无效
 - 进入具体的中断异常处理函数
 - 恢复中断异常前环境的寄存器
 
-pk中使用trapframe_t结构体（pk.h）来保存中断发生时常用的32个寄存器及部分特殊寄存器的值，其结构如下。
+pk中使用trapframe_t结构体（pk/pk.h）来保存中断发生时常用的32个寄存器及部分特殊寄存器的值，其结构如下。
 
 ```
 typedef struct
@@ -220,11 +220,11 @@ typedef struct
 } trapframe_t;
 ```
 
-下面，请阅读entry.S,详细分析同上述三个过程相对应的代码。
+下面，请阅读pk/entry.S，详细分析同上述三个过程相对应的代码。
 
 **2.2.4 练习四：中断的具体处理（需要编程）**
 
-当中断异常发生后，中断帧将会被传递给handlers.c中的handle_trap函数。接着，通过trapframe中的scause寄存器的值可以判断属于哪种中断异常，从而选择相对应的中断处理函数。
+当中断异常发生后，中断帧将会被传递给pk/handlers.c中的handle_trap函数。接着，通过trapframe中的scause寄存器的值可以判断属于哪种中断异常，从而选择相对应的中断处理函数。
 
 在pk/handlers.c中的各种中断处理函数的实现，其中segfault段错误的处理函数与illegal_instruction的处理函数并不完善。请你在pk/handlers.c中找到并完善segfault与handle_illegal_instruction两个函数。
 
@@ -433,8 +433,6 @@ typedef struct {
 ```
 
 而通过ELF文件头与节头表找到文件的某一节的方式和之前所说的找到某一段的方式是类似的。
-
-  
 
 **2.2.2** 代理内核与应用程序的加载
 
