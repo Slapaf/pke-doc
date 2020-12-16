@@ -345,7 +345,7 @@ typedef struct {
 } Elf64_Ehdr;
 ```
 
-ELF文件头比较重要的几个结构体成员是e_entry、e_phoff、e_phnum、e_shoff、e_shnum。其中e_entry是可执行程序的入口地址，即从内存的这个闻之开始执行，在这里入口地址是虚拟地址，也就是链接地址；e_phoff和e_phnum可以用来找到所有的程序头表项，e_phoff是程序头表的第一项相对于ELF文件的开始位置的偏移，而e_phnum则是表项的个数；同理e_ shoff和e_ shnum可以用来找到所有的节头表项。
+ELF文件头比较重要的几个结构体成员是e_entry、e_phoff、e_phnum、e_shoff、e_shnum。其中e_entry是可执行程序的入口地址，即从内存的这个位置开始执行，在这里入口地址是虚拟地址，也就是链接地址；e_phoff和e_phnum可以用来找到所有的程序头表项，e_phoff是程序头表的第一项相对于ELF文件的开始位置的偏移，而e_phnum则是表项的个数；同理e_ shoff和e_ shnum可以用来找到所有的节头表项。
 
 以例1.1为例，我们可以使用riscv64-unknown-elf-objdump工具，查看该ELF文件。
 
@@ -539,9 +539,9 @@ typedef struct {
 221     }
 ```
 
-​    在enter_supervisor_mode函数中，将 mstatus的MPP域设置为1，表示中断发生之前的模式是Superior，将mstatus的MPIE域设置为0，表示中段发生前MIE的值为0。随机将机器模式的内核栈顶写入mscratch寄存器中，设置mepc为rest_of_boot_loader的地址，并将kernel_stack_top与0作为参数存入a0和a1。
+​    在enter_supervisor_mode函数中，将 mstatus的MPP域设置为1，表示中断发生之前的模式是Supervisor，将mstatus的MPIE域设置为0，表示中段发生前MIE的值为0。随即将机器模式的内核栈顶写入mscratch寄存器中，设置mepc为rest_of_boot_loader的地址，并将kernel_stack_top与0作为参数存入a0和a1。
 
-​    最后，执行mret指令，该指令执行时，程序从机器模式的异常返回，将程序计数器pc设置为mepc，即rest_of_boot_loader的地址；将特权级设置为mstatus寄存器的MPP域，即方才所设置的代表Superior的1，MPP设置为0；将mstatus寄存器的MIE域设置为MPIE，即方才所设置的表示中断关闭的0，MPIE设置为1。
+​    最后，执行mret指令，该指令执行时，程序从机器模式的异常返回，将程序计数器pc设置为mepc，即rest_of_boot_loader的地址；将特权级设置为mstatus寄存器的MPP域，即方才所设置的代表Supervisor的1，MPP设置为0；将mstatus寄存器的MIE域设置为MPIE，即方才所设置的表示中断关闭的0，MPIE设置为1。
 
 ​    于是，当mret指令执行完毕，程序将从rest_of_boot_loader继续执行。
 
