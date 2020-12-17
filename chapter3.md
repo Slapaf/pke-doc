@@ -70,7 +70,7 @@ RISC-V中提供了ecall指令，用于向运行时环境发出请求，我们可
 
 阅读pk目录syscall.c文件，增加一个系统调用sys_get_memsize()，系统调用返回spike设置的内存空间大小, 系统调用号为81。
 
-提升：在pk目录下的mmap.c文件中，函数pk_vm_init中定义了代理内核的内存空间大小。
+提示：在pk目录下的mmap.c文件中，函数pk_vm_init中定义了代理内核的内存空间大小。
 
 spike 通过-m来指定分配的物理内存，单位是MiB，默认为2048。如：
 
@@ -236,9 +236,9 @@ Score: 20/20
 221     }
 ```
 
-在enter_supervisor_mode函数中，将 mstatus的MPP域设置为1，表示中断发生之前的模式是Superior，将mstatus的MPIE域设置为0，表示中段发生前MIE的值为0。随机将机器模式的内核栈顶写入mscratch寄存器中，设置mepc为rest_of_boot_loader的地址，并将kernel_stack_top与0作为参数存入a0和a1。
+在enter_supervisor_mode函数中，将 mstatus的MPP域设置为1，表示中断发生之前的模式是Supervisor，将mstatus的MPIE域设置为0，表示中断发生前MIE的值为0。随即将机器模式的内核栈顶写入mscratch寄存器中，设置mepc为rest_of_boot_loader的地址，并将kernel_stack_top与0作为参数存入a0和a1。
 
-最后，执行mret指令，该指令执行时，程序从机器模式的异常返回，将程序计数器pc设置为mepc，即rest_of_boot_loader的地址；将特权级设置为mstatus寄存器的MPP域，即方才所设置的代表Superior的1，MPP设置为0；将mstatus寄存器的MIE域设置为MPIE，即方才所设置的表示中断关闭的0，MPIE设置为1。
+最后，执行mret指令，该指令执行时，程序从机器模式的异常返回，将程序计数器pc设置为mepc，即rest_of_boot_loader的地址；将特权级设置为mstatus寄存器的MPP域，即方才所设置的代表Supervisor的1，MPP设置为0；将mstatus寄存器的MIE域设置为MPIE，即方才所设置的表示中断关闭的0，MPIE设置为1。
 
 于是，当mret指令执行完毕，程序将从rest_of_boot_loader继续执行。
 
@@ -308,7 +308,7 @@ Score: 20/20
 
 在61行，交换了sp与sscratch的值，这里是为了根据sscratch的值判断该中断是来源于U模式还是S模式。
 
-如果sp也就是传入的sscratch值不为零，则跳转至64行，若sscratch的值为零，则恢复原sp中的值。这是因为，当中断来源于S模式是，sscratch的值为0，sp中存储的就是内核的堆栈地址。而当中断来源于U模式时，sp中存储的是用户的堆栈地址，sscratch中存储的则是内核的堆栈地址，需要交换二者，是sp指向内核的堆栈地址。
+如果sp也就是传入的sscratch值不为零，则跳转至64行，若sscratch的值为零，则恢复原sp中的值。这是因为，当中断来源于S模式时，sscratch的值为0，sp中存储的就是内核的堆栈地址。而当中断来源于U模式时，sp中存储的是用户的堆栈地址，sscratch中存储的则是内核的堆栈地址，需要交换二者，是sp指向内核的堆栈地址。
 
 接着在64,65行保存上下文，最后跳转至67行处理trap。handle_trap在pk目录下的handlers.c文件中，代码如下：
 
