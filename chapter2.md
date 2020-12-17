@@ -539,7 +539,7 @@ typedef struct {
 221     }
 ```
 
-​    在enter_supervisor_mode函数中，将 mstatus的MPP域设置为1，表示中断发生之前的模式是Supervisor，将mstatus的MPIE域设置为0，表示中段发生前MIE的值为0。随即将机器模式的内核栈顶写入mscratch寄存器中，设置mepc为rest_of_boot_loader的地址，并将kernel_stack_top与0作为参数存入a0和a1。
+​    在enter_supervisor_mode函数中，将 mstatus的MPP域设置为1，表示中断发生之前的模式是Supervisor，将mstatus的MPIE域设置为0，表示中断发生前MIE的值为0。随即将机器模式的内核栈顶写入mscratch寄存器中，设置mepc为rest_of_boot_loader的地址，并将kernel_stack_top与0作为参数存入a0和a1。
 
 ​    最后，执行mret指令，该指令执行时，程序从机器模式的异常返回，将程序计数器pc设置为mepc，即rest_of_boot_loader的地址；将特权级设置为mstatus寄存器的MPP域，即方才所设置的代表Supervisor的1，MPP设置为0；将mstatus寄存器的MIE域设置为MPIE，即方才所设置的表示中断关闭的0，MPIE设置为1。
 
