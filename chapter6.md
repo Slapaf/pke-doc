@@ -30,7 +30,7 @@ l struct context context;
 
 l struct trapframe *tf;            
 
-l uintptr_t cr3;               
+l uintptr_t pagetable;               
 
 l uint32_t flags;           
 
@@ -132,7 +132,7 @@ Score: 20/20
  48    struct proc_struct *parent;                   
  50    struct context context;           
  51    trapframe_t *tf;           
- 52    uintptr_t cr3;               
+ 52    uintptr_t pagetable;               
  53    uint32_t flags;              
  54    char name[PROC_NAME_LEN + 1];       
  55    list_entry_t list_link;           
@@ -169,7 +169,7 @@ l context：进程的上下文
 
 l tf：当前中断的栈帧
 
-l cr3：进程的页表地址
+l pagetable：进程的页表地址
 
 l name：进程名
 
@@ -247,9 +247,9 @@ copy_mm k函数代码如下，在函数中，我们对页表进行拷贝。
 229  copy_mm(uint32_t clone_flags, struct proc_struct *proc) {
 230    //assert(currentproc->mm == NULL);
 231    /* do nothing in this project */
-232    uintptr_t cr3=(uintptr_t)__page_alloc();
-233    memcpy((void *)cr3,(void *)proc->cr3,RISCV_PGSIZE);
-234    proc->cr3=cr3;
+232    uintptr_t pagetable=(uintptr_t)__page_alloc();
+233    memcpy((void *)pagetable,(void *)proc->pagetable,RISCV_PGSIZE);
+234    proc->pagetable=pagetable;
 235    return 0;
 236  }
 ```
@@ -332,7 +332,7 @@ copy_mm k函数代码如下，在函数中，我们对页表进行拷贝。
 148      bool intr_flag;
 149      struct proc_struct *prev = currentproc, *next = proc;
 150      currentproc = proc;
-151      write_csr(sptbr, ((uintptr_t)next->cr3 >> RISCV_PGSHIFT) | SATP_MODE_CHOICE);
+151      write_csr(sptbr, ((uintptr_t)next->pagetable >> RISCV_PGSHIFT) | SATP_MODE_CHOICE);
 152      switch_to(&(prev->context), &(next->context));
 153
 154    }
