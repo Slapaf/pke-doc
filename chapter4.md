@@ -1,12 +1,86 @@
-## 第四章．（实验3）物理内存管理
+# 第四章．（实验3）物理内存管理
 
-### 4.1 实验内容
+## 4.1 实验内容
 
-实验要求：了解物理内存，管理物理内存。 
 
-**4.1.1 练习一：OS内存的初始化过程**
+
+#### 应用： ####
+
+
+app3_1.c源文件如下：
+
+	 1     #define ecall() ({\
+	 2      asm volatile(\
+	 3         "li x17,81\n"\
+	 4       "ecall");\
+	 5     })
+	 6
+	 7     int main(void){
+	 8         //调用自定义的81号系统调用
+	 9          ecall();
+	 10         return 0;
+	 11     }
+
+对于操作系统来说，内存分配的过程需要对应用层透明，故而实验三的app同实验二相同，并在内核中对于的内存分配单元做如下校验：
+
+		
+	static void
+	basic_check(void) {
+	    struct Page *p0, *p1, *p2;
+	    p0 = p1 = p2 = NULL;
+	    assert((p0 = alloc_page()) != NULL);
+	    assert((p1 = alloc_page()) != NULL);
+	    assert((p2 = alloc_page()) != NULL);
+	
+	    assert(p0 != p1 && p0 != p2 && p1 != p2);
+	    assert(p0->ref == 0 && p1->ref == 0 && p2->ref == 0);
+	
+	
+	    list_entry_t free_list_store = free_list;
+	    list_init(&free_list);
+	    assert(list_empty(&free_list));
+	
+	    unsigned int nr_free_store = nr_free;
+	    nr_free = 0;
+	    free_page(p0);
+	    free_page(p1);
+	    free_page(p2);
+	    assert(nr_free == 3);
+	
+	    assert((p0 = alloc_page()) != NULL);
+	    assert((p1 = alloc_page()) != NULL);
+	    assert((p2 = alloc_page()) != NULL);
+	
+	    assert(alloc_page() == NULL);
+	
+	    free_page(p0);
+	    assert(!list_empty(&free_list));
+	
+	    struct Page *p;
+	    assert((p = alloc_page()) == p0);
+	    assert(alloc_page() == NULL);
+	
+	    assert(nr_free == 0);
+	    free_list = free_list_store;
+	    nr_free = nr_free_store;
+	
+	    free_page(p);
+	    free_page(p1);
+	    free_page(p2);
+	}
+
+
+
+
+#### 任务一 : OS内存的初始化过程（理解） ####
+
+任务描述：
 
 在"pk/mmap.c"内有 pk_vm_init()函数，阅读该函数，了解OS内存初始化的过程。
+
+
+预期输出：
+
 
 ```
 364  uintptr_t pk_vm_init()
@@ -49,7 +123,11 @@
 
 以上代码中，我们给出了大体的注释，请根据以上代码，读者可以尝试画一下PK的逻辑地址空间结构图，以及逻辑地址空间到物理地址空间的映射关系。
 
-**4.1.2 练习二：first_fit内存页分配算法（需要编程）**
+
+#### 任务二 : first_fit内存页分配算法（编程） ####
+
+任务描述：
+
 
 在"pk/pmm.c" 中，我们实现了对物理内存的管理。
 
@@ -87,7 +165,11 @@ l pmm_check ：检查校验函数
 
 first_fit分配算法需要维护一个查找有序（地址按从小到大排列）空闲块（以页为最小单位的连续地址空间）的数据结构，而双向链表是一个很好的选择。pk/list.h定义了可挂接任意元素的通用双向链表结构和对应的操作，所以需要了解如何使用这个文件提供的各种函数，从而可以完成对双向链表的初始化/插入/删除等。
 
-​    
+
+预期输出：
+
+我们在实验二中已经讨论过中断入口函数位置的设置，现在继续跟踪中断入口函数，找出系统调用的执行过程。
+
 
 你可以使用python脚本检查你的输出：
 
@@ -104,7 +186,7 @@ running app3 m1024 : OK
 Score: 20/20 
 ```
 
-### 4.2 基础知识
+## 4.2 实验指导
 
 **4.2.1 物理内存空间与编址**
 

@@ -1,14 +1,32 @@
-## 第六章．（实验5）进程的封装
+# 第六章．（实验5）进程的封装
 
-### 6.1 实验内容
+## 6.1 实验内容
 
-实验要求：在APP里写fork调用，其执行过程将fork出一个子进程。在代理内核中实现fork的处理例程（trap），使其能够支撑APP程序的正确执行。
+#### 应用： ####
 
-在本次实验的app4.c文件中，将会测试fork（）函数。代码中170及172系统调用分别对应着sys_fork（）和sys_getpid（）系统调用。调用fork函数后，将会有两个返回。在父进程中，fork返回新创建子进程的进程ID；而在子进程中，fork返回0。你需要阅读proc.c文件，完善相关代码，是的app4.c可以正常运行。
+app5.c源文件如下：
 
- 
+int main(){
 
-**6.1.1 练习一：alloc_proc（需要编程）**
+
+    if(fork() == 0) {
+        printf("this is child process;my pid = %d\n",getpid());
+    }else {
+        printf("this is farther process;my pid = %d\n",getpid());
+    }
+
+    return 0;
+}
+
+以上代码中，进行了fork调用，其执行过程将fork出一个子进程。
+
+
+
+
+#### 任务一 : alloc_proc（编程） ####
+
+任务描述：
+
 
 完善"pk/proc.c"中的alloc_proc()，你需要对以下属性进行初始化：
 
@@ -35,12 +53,16 @@ l uintptr_t pagetable;
 l uint32_t flags;           
 
 l char name[PROC_NAME_LEN + 1];   
+```
 
- 
 
-**6.1.2 练习二：do_fork（需要编程）**
 
-完善"pk/proc.c"中的do_fork函数，你需要进行以下工作：
+
+
+#### 任务二 : do_fork（编程） ####
+
+任务描述：
+
 
 l 调用alloc_proc()来为子进程创建进程控制块
 
@@ -56,6 +78,9 @@ l 设置子进程状态为就绪
 
 l 将子进程加入到链表中
 
+
+
+预期输出：
  
 
 完成以上代码后，你可以进行如下测试，然后输入如下命令：
@@ -116,7 +141,7 @@ running app5 : OK
 Score: 20/20
 ```
 
-### 6.2 基础知识
+## 6.2 实验指导
 
 **6.2.1 进程结构**
 

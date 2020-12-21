@@ -1,14 +1,65 @@
-## 第五章．（实验4）缺页异常的处理
+# 第五章．（实验4）缺页异常的处理
 
-### 5.1 实验内容
+## 5.1 实验内容
 
-实验要求：在APP里写递归程序，其执行过程导致栈的不断增长。在代理内核中实现缺页中断的处理例程（trap），使其能够支撑递归程序的正确执行。
 
- 
+#### 应用： ####
 
-**练习一：缺页中断实例的完善（需要编程）**
 
-  **在**"pk/mmap.c"内有__handle_page_fault()函数，完善该函数，实现缺页中的处理。
+app4_1.c源文件如下：
+
+
+	1 #include<stdio.h>
+	2
+	3 int main()
+	4 {
+	5
+	6         uintptr_t addr = 0x7f000000;
+	7         *(int *)(addr)=1;
+	8
+	9         uintptr_t addr1_same_page = 0x7f000010;
+	10         uintptr_t addr2_same_page = 0x7f000fff;
+	11         *(int *)(addr1_same_page)=2;
+	12         *(int *)(addr2_same_page)=3;
+	13
+	14         uintptr_t addr1_another_page = 0x7f001000;
+	15         uintptr_t addr2_another_page = 0x7f001ff0;
+	16         *(int *)(addr1_another_page)=4;
+	17         *(int *)(addr2_another_page)=5;
+	18
+	19
+	20         return 0;
+	21 }
+
+以上代码中对地址0x7f000000进行访问，将触发缺页异常。随后，对同一页内的地址0x7f000010、0x7f000fff进行访问，此时由于页0x7f000000已近完成映射，故而不会发生异常。最后有对新的一页进行访问，将再次引发缺页异常。
+
+app4_2.c源文件如下：
+	
+	  1 #include <stdio.h>
+	  2 void fun(int num){
+	  3         if(num==0){
+	  4                 return;
+	  5         }
+	  6         fun(num-1);
+	  7 }
+	  8 int main(){
+	  9         int num=10000;
+	 10         fun(num);
+	 11         printf("end  \n");
+	 12         return 0;
+	 13 }
+
+
+以上代码中进行了大量递归，这将产生缺页。
+
+
+
+#### 任务一 : 缺页中断实例的完善（编程） ####
+
+任务描述：
+
+
+ **在**"pk/mmap.c"内有__handle_page_fault()函数，完善该函数，实现缺页中的处理。
 
 ```
 202  static int __handle_page_fault(uintptr_t vaddr, int prot)
@@ -32,6 +83,10 @@
 220
 221    //<----------end
 ```
+
+
+预期输出：
+ 
 
 当你完成__handle_page_fault()函数后，可进行如下测试：
 
@@ -74,7 +129,7 @@ running app4_2 : OK
  test4_2 : OK
 ```
 
-### 5.2 基础知识
+## 5.2 基础知识
 
 **5.2.1 虚拟地址空间**
 
