@@ -5,8 +5,9 @@
 #### 应用： ####
 
 app5.c源文件如下：
-```
+
 int main(){
+
 
     if(fork() == 0) {
         printf("this is child process;my pid = %d\n",getpid());
@@ -28,7 +29,7 @@ int main(){
 
 
 完善"pk/proc.c"中的alloc_proc()，你需要对以下属性进行初始化：
-```
+
 l enum proc_state state;  
 
 l int pid;   
@@ -52,7 +53,7 @@ l uintptr_t pagetable;
 l uint32_t flags;           
 
 l char name[PROC_NAME_LEN + 1];   
-```
+
 
 
 
@@ -250,9 +251,9 @@ l name：进程名
 144  write_csr(sscratch, kstack_top);
 ```
 
-​    在这里，声明了一个trapframe，并且将它的gpr[2]（sp）设置为内核栈指针，将它的epc设置为current.entry，其中current.entry是elf文件的入口地址也就是app的起始执行位置，随即，我们调用了do_fork函数，其中传入参数stack为0表示我们正在fork一个内核进程。
+​    在这里，声明了一个trapframe，并且将它的gpr[2]（sp）设置为内核栈指针，将它的epc设置为current.entry，其中current.entry是elf文件的入口地址也就是app的起始执行位置，随即，我们调用了do_frok函数，其中传入参数stack为0表示我们正在fork一个内核进程。
 
-​    在do_fork函数中，你会调用alloc_proc()来为子进程创建进程控制块、调用setup_kstack来设置栈空间，调用copy_mm来拷贝页表，调用copy_thread来拷贝进程。现在，我们来对以上函数进行分析。
+​    在do_frok函数中，你会调用alloc_proc()来为子进程创建进程控制块、调用setup_kstack来设置栈空间，调用copy_mm来拷贝页表，调用copy_thread来拷贝进程。现在，我们来对以上函数进行分析。
 
 ​    setup_kstack函数代码如下，在函数中，我们为进程分配栈空间，然后返回：
 
@@ -402,7 +403,7 @@ copy_mm k函数代码如下，在函数中，我们对页表进行拷贝。
  40   ret
 ```
 
-​    可以看到，在switch_to中，我们真正执行了上一个进程的上下文保存，以及下一个进程的上下文加载。在switch_to的最后一行，我们执行ret指令，该指令是一条从子过程返回的伪指令，会将pc设置为x1（ra）寄存器的值，还记得我们在copy_thread中层将ra设置为forkret嘛？现在程序将从forkret继续执行：
+​    可以看到，在switch_to中，我们正真执行了上一个进程的上下文保存，以及下一个进程的上下文加载。在switch_to的最后一行，我们执行ret指令，该指令是一条从子过程返回的伪指令，会将pc设置为x1（ra）寄存器的值，还记得我们在copy_thread中层将ra设置为forkret嘛？现在程序将从forkret继续执行：
 
 ```
 160  static void
