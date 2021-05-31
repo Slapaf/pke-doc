@@ -78,7 +78,7 @@ RISC-V交叉编译器的构建需要一些本地支撑软件包，可使用以�
 
 到github下载课程仓库：
 
-`$ git clone https://github.com/MrShawCode/pke.git`
+`$ git clone https://github.com/MrShawCode/riscv-pke.git`
 
 克隆完成后，将在当前目录看到pke目录。这时，可以到pke目录下查看pke的代码结构，例如：
 
