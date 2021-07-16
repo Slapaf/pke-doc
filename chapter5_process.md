@@ -31,7 +31,7 @@
 
 实验3跟之前的两个实验最大的不同，在于在实验3的3个基本实验中，PKE操作系统将需要支持多个进程的执行。为了对多任务环境进行支撑，PKE操作系统定义了一个“进程池”（见kernel/process.c文件）：
 
-```
+```C
  34 process procs[NPROC];
 ```
 
@@ -39,7 +39,7 @@
 
 接下来，PKE操作系统对进程的结构进行了扩充（见kernel/process.h文件）：
 
-```
+```C
  53   // points to a page that contains mapped_regions
  54   mapped_region *mapped_info;
  55   // next free mapped region in mapped_info
@@ -60,7 +60,7 @@
 
 - 前两项mapped_info和total_mapped_region用于对进程的虚拟地址空间（中的代码段、堆栈段等）进行跟踪，这些虚拟地址空间在进程创建（fork）时，将发挥重要作用。同时，这也是lab3_1的内容。PKE将进程可能拥有的段分为以下几个类型：
 
-```
+```C
  29 enum segment_type {
  30   CODE_SEGMENT,    // ELF segment
  31   DATA_SEGMENT,    // ELF segment
@@ -75,7 +75,7 @@
 - pid是进程的ID号，具有唯一性；
 - status记录了进程的状态，PKE操作系统在实验3给进程规定了以下几种状态：
 
-```
+```C
  20 enum proc_status {
  21   FREE,            // unused state
  22   READY,           // ready state
@@ -97,7 +97,7 @@
 
 PKE实验中，创建一个进程需要先调用kernel/process.c文件中的alloc_process()函数：
 
-```
+```C
  88 process* alloc_process() {
  89   // locate the first usable process structure
  90   int i;
@@ -161,7 +161,7 @@ PKE实验中，创建一个进程需要先调用kernel/process.c文件中的allo
 
 对于给定应用，PKE将通过调用load_bincode_from_host_elf()函数载入给定应用对应的ELF文件的各个段。之后被调用的elf_load()函数在载入段后，将对被载入的段进行判断，以记录它们的虚地址映射：
 
-```
+```c
  62 elf_status elf_load(elf_ctx *ctx) {
  63   elf_prog_header ph_addr;
  64   int i, off;
@@ -208,7 +208,7 @@ PKE实验中，创建一个进程需要先调用kernel/process.c文件中的allo
 
 接下来，将通过switch_to()函数将所构造的进程投入执行：
 
-```
+```c
  42 void switch_to(process *proc) {
  43   assert(proc);
  44   current = proc;
@@ -245,7 +245,7 @@ PKE实验中，创建一个进程需要先调用kernel/process.c文件中的allo
 
 不同于实验1和实验2，实验3的exit系统调用不能够直接将系统shutdown，因为一个进程的结束并不一定意味着系统中所有进程的完成。以下是实验3中exit系统调用的实现：
 
-```
+```c
  34 ssize_t sys_user_exit(uint64 code) {
  35   sprint("User exit with code:%d.\n", code);
  36   // in lab3 now, we should reclaim the current process, and reschedule.
@@ -257,7 +257,7 @@ PKE实验中，创建一个进程需要先调用kernel/process.c文件中的allo
 
 可以看到，如果某进程调用了exit()系统调用，操作系统的处理方法是调用free_process()函数，将当前进程（也就是调用者）进行“释放”，然后转进程调度。其中free_process()函数的实现非常简单：
 
-```
+```c
 149 int free_process( process* proc ) {
 150   // we set the status to ZOMBIE, but cannot destruct its vm space immediately.
 151   // since proc can be current process, and its user kernel stack is currently in use!
@@ -285,7 +285,7 @@ PKE的操作系统设计了一个非常简单的就绪队列管理（因为实�
 
 将一个进程加入就绪队列，可以调用insert_to_ready_queue()函数：
 
-```
+```c
  13 void insert_to_ready_queue( process* proc ) {
  14   sprint( "going to insert process %d to ready queue.\n", proc->pid );
  15   // if the queue is empty in the beginning
@@ -316,7 +316,7 @@ PKE的操作系统设计了一个非常简单的就绪队列管理（因为实�
 
 PKE操作系统内核通过调用schedule()函数来完成进程的选择和换入：
 
-```
+```c
  45 void schedule() {
  46   if ( !ready_queue_head ){
  47     // by default, if there are no ready process, and all processes are in the status of
@@ -364,7 +364,7 @@ PKE操作系统内核通过调用schedule()函数来完成进程的选择和换�
 
 - user/app_naive_fork.c
 
-```
+```c
   1 /*
   2  * Below is the given application for lab3_1.
   3  * It forks a child process to run .
@@ -388,55 +388,563 @@ PKE操作系统内核通过调用schedule()函数来完成进程的选择和换�
  21 }
 ```
 
-以上程序
+以上程序的行为非常简单：主进程调用fork()函数，后者产生一个系统调用，基于主进程这个模板创建它的子进程。
 
+- 切换到lab3_1，继承lab2_3及之前实验所做的修改，并make后的直接运行结果：
 
+```
+//切换到lab3_1
+$ git checkout lab3_1_fork
+
+//继承lab2_3以及之前的答案
+$ git merge lab2_3_pagefault -m "continue to work on lab3_1"
+
+//重新构造
+$ make clean; make
+
+//运行构造结果
+$ spike ./obj/riscv-pke ./obj/app_naive_fork
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
+free physical memory address: [0x0000000080010000, 0x0000000087ffffff]
+kernel memory manager is initializing ...
+KERN_BASE 0x0000000080000000
+physical address of _etext is: 0x0000000080005000
+kernel page table is on
+Switching to user mode...
+in alloc_proc. user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000
+User application is loading.
+Application: ./obj/app_naive_fork
+CODE_SEGMENT added at mapped info offset:3
+Application program entry point (virtual address): 0x0000000000010078
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+User call fork.
+will fork a child from parent 0.
+in alloc_proc. user frame 0x0000000087faf000, user stack 0x000000007ffff000, user kstack 0x0000000087fae000
+You need to implement the code segment mapping of child in lab3_1.
+
+System is shutting down with exit code -1.
+```
+
+从以上运行结果来看，应用程序的fork动作并未将子进程给创建出来并投入运行。按照提示，我们需要在PKE操作系统内核中实现子进程到父进程代码段的映射，以最终完成fork动作。
+
+这里，既然涉及到了父进程的代码段，我们就可以先用readelf命令查看一下给定应用程序的可执行代码对应的ELF文件结构：
+
+```
+$ riscv64-unknown-elf-readelf -l ./obj/app_naive_fork
+
+Elf file type is EXEC (Executable file)
+Entry point 0x10078
+There is 1 program header, starting at offset 64
+
+Program Headers:
+  Type           Offset             VirtAddr           PhysAddr
+                 FileSiz            MemSiz              Flags  Align
+  LOAD           0x0000000000000000 0x0000000000010000 0x0000000000010000
+                 0x000000000000040c 0x000000000000040c  R E    0x1000
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .text .rodata
+```
+
+可以看到，app_naive_fork可执行文件只包含一个代码段（编号为00），应该来讲是最简单的可执行文件结构了（无须考虑数据段的问题）。如果要依据这样的父进程模板创建子进程，只需要将它的代码段映射（而非拷贝）到子进程的对应虚地址即可。
 
 <a name="lab3_1_content"></a>
 
 #### **实验内容**
 
+完善操作系统内核kernel/process.c文件中的do_fork()函数，并最终获得以下预期结果：
+
+```
+$ spike ./obj/riscv-pke ./obj/app_naive_fork
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
+free physical memory address: [0x0000000080010000, 0x0000000087ffffff]
+kernel memory manager is initializing ...
+KERN_BASE 0x0000000080000000
+physical address of _etext is: 0x0000000080005000
+kernel page table is on
+Switching to user mode...
+in alloc_proc. user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000
+User application is loading.
+Application: ./obj/app_naive_fork
+CODE_SEGMENT added at mapped info offset:3
+Application program entry point (virtual address): 0x0000000000010078
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+User call fork.
+will fork a child from parent 0.
+in alloc_proc. user frame 0x0000000087faf000, user stack 0x000000007ffff000, user kstack 0x0000000087fae000
+do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
+going to insert process 1 to ready queue.
+Parent: Hello world! child id 1
+User exit with code:0.
+going to schedule process 1 to run.
+Child: Hello world!
+User exit with code:0.
+no more ready processes, system shutdown now.
+System is shutting down with exit code 0.
+```
+
+从以上运行结果来看，子进程已经被创建，且在其后被投入运行。
 
 <a name="lab3_1_guide"></a>
 
 #### **实验指导**
 
+读者可以回顾[lab1_1](chapter3_traps.md#syscall)中所学习到的系统调用的知识，从应用程序（user/app_naive_fork.c）开始，跟踪fork()函数的实现：
 
+user/app_naive_fork.c --> user/user_lib.c --> kernel/strap_vector.S --> kernel/strap.c --> kernel/syscall.c
+
+直至跟踪到kernel/process.c文件中的do_fork()函数：
+
+```c
+166 int do_fork( process* parent)
+167 {
+168   sprint( "will fork a child from parent %d.\n", parent->pid );
+169   process* child = alloc_process();
+170
+171   for( int i=0; i<parent->total_mapped_region; i++ ){
+172     // browse parent's vm space, and copy its trapframe and data segments,
+173     // map its code segment.
+174     switch( parent->mapped_info[i].seg_type ){
+175       case CONTEXT_SEGMENT:
+176         *child->trapframe = *parent->trapframe;
+177         break;
+178       case STACK_SEGMENT:
+179         memcpy( (void*)lookup_pa(child->pagetable, child->mapped_info[0].va),
+180           (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
+181         break;
+182       case CODE_SEGMENT:
+183         // TODO: implment the mapping of child code segment to parent's code segment.
+184         // hint: the virtual address mapping of code segment is tracked in mapped_info
+185         // page of parent's process structure. use the information in mapped_info to
+186         // retrieve the virtual to physical mapping of code segment.
+187         // after having the mapping information, just map the corresponding virtual
+188         // address region of child to the physical pages that actually store the code
+189         // segment of parent process.
+190         // DO NOT COPY THE PHYSICAL PAGES, JUST MAP THEM.
+191         panic( "You need to implement the code segment mapping of child in lab3_1.\n" );
+192
+193         // after mapping, register the vm region (do not delete codes below!)
+194         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+195         child->mapped_info[child->total_mapped_region].npages =
+196           parent->mapped_info[i].npages;
+197         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
+198         child->total_mapped_region++;
+199         break;
+200     }
+201   }
+202
+203   child->status = READY;
+204   child->trapframe->regs.a0 = 0;
+205   child->parent = parent;
+206   insert_to_ready_queue( child );
+207
+208   return child->pid;
+209 }
+```
+
+该函数使用第171--201行的循环来拷贝父进程的逻辑地址空间到其子进程。我们看到，对于trapframe段（case CONTEXT_SEGMENT）以及堆栈段（case CODE_SEGMENT），do_fork()函数采用了简单复制的办法来拷贝父进程的这两个段到子进程中，这样做的目的是将父进程的执行现场传递给子进程。
+
+然而，对于父进程的代码段，子进程应该如何“继承”呢？通过第184--189行的注释，我们知道对于代码段，我们不应直接复制（减少系统开销），而应通过映射的办法，将子进程中对应的逻辑地址空间映射到其父进程中装载代码段的物理页面。这里，就要回到[实验2内存管理](chapter4_memory.md#pagetablecook)部分，寻找合适的函数来实现了。
 
 <a name="lab3_2_yield"></a>
+
 ## 5.3 lab3_2 进程yield
 
 <a name="lab3_2_app"></a>
 
 #### **给定应用**
 
+- user/app_yield.c
+
+```C
+  1 /*
+  2  * This app fork a child process to run.
+  3  * In loops of child process and child process, they give up cpu
+  4  * so that the other one can have some cpu time to run.
+  5  */
+  6
+  7 #include "user/user_lib.h"
+  8 #include "util/types.h"
+  9
+ 10 int main(void) {
+ 11   uint64 pid = fork();
+ 12   uint64 rounds = 0xffff;
+ 13   if (pid == 0) {
+ 14     printu("Child: Hello world! \n");
+ 15     for (uint64 i = 0; i < rounds; ++i) {
+ 16       if (i % 10000 == 0) {
+ 17         printu("Child running %ld \n", i);
+ 18         yield();
+ 19       }
+ 20     }
+ 21   } else {
+ 22     printu("Parent: Hello world! \n");
+ 23     for (uint64 i = 0; i < rounds; ++i) {
+ 24       if (i % 10000 == 0) {
+ 25         printu("Parent running %ld \n", i);
+ 26         yield();
+ 27       }
+ 28     }
+ 29   }
+ 30
+ 31   exit(0);
+ 32   return 0;
+ 33 }
+```
+
+和lab3_1一样，以上的应用程序通过fork系统调用创建了一个子进程，接下来，父进程和子进程都进入了一个很长的循环。在循环中，无论是父进程还是子进程，在循环的次数是10000的整数倍时，除了打印信息外都调用了yield()函数，来释放自己的执行权（即CPU）。
+
+- 切换到lab3_2，继承lab3_1及之前实验所做的修改，并make后的直接运行结果：
+
+```bash
+//切换到lab3_2
+$ git checkout lab3_2_yield
+
+//继承lab3_1以及之前的答案
+$ git merge lab3_1_fork -m "continue to work on lab3_2"
+
+//重新构造
+$ make clean; make
+
+//运行构造结果
+$ spike ./obj/riscv-pke ./obj/app_yield
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
+free physical memory address: [0x0000000080010000, 0x0000000087ffffff]
+kernel memory manager is initializing ...
+KERN_BASE 0x0000000080000000
+physical address of _etext is: 0x0000000080005000
+kernel page table is on
+Switching to user mode...
+in alloc_proc. user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000
+User application is loading.
+Application: ./obj/app_yield
+CODE_SEGMENT added at mapped info offset:3
+Application program entry point (virtual address): 0x000000000001017c
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+User call fork.
+will fork a child from parent 0.
+in alloc_proc. user frame 0x0000000087faf000, user stack 0x000000007ffff000, user kstack 0x0000000087fae000
+do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
+going to insert process 1 to ready queue.
+Parent: Hello world!
+Parent running 0
+You need to implement the yield syscall in lab3_2.
+
+System is shutting down with exit code -1.
+```
+
+从以上输出来看，还是因为PKE操作系统中的yield()功能未完善，导致应用无法正常执行下去。
+
 <a name="lab3_2_content"></a>
 
 #### **实验内容**
 
+完善yield系统调用，实现进程执行过程中的主动释放CPU的动作。实验完成后，获得以下预期结果：
+
+```bash
+$ spike ./obj/riscv-pke ./obj/app_yield
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
+free physical memory address: [0x0000000080010000, 0x0000000087ffffff]
+kernel memory manager is initializing ...
+KERN_BASE 0x0000000080000000
+physical address of _etext is: 0x0000000080005000
+kernel page table is on
+Switching to user mode...
+in alloc_proc. user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000
+User application is loading.
+Application: ./obj/app_yield
+CODE_SEGMENT added at mapped info offset:3
+Application program entry point (virtual address): 0x000000000001017c
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+User call fork.
+will fork a child from parent 0.
+in alloc_proc. user frame 0x0000000087faf000, user stack 0x000000007ffff000, user kstack 0x0000000087fae000
+do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
+going to insert process 1 to ready queue.
+Parent: Hello world!
+Parent running 0
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child: Hello world!
+Child running 0
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+Parent running 10000
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child running 10000
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+Parent running 20000
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child running 20000
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+Parent running 30000
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child running 30000
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+Parent running 40000
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child running 40000
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+Parent running 50000
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child running 50000
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+Parent running 60000
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child running 60000
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+User exit with code:0.
+going to schedule process 1 to run.
+User exit with code:0.
+no more ready processes, system shutdown now.
+System is shutting down with exit code 0.
+```
 
 <a name="lab3_2_guide"></a>
 
 #### **实验指导**
 
+进程释放CPU的动作应该是：
+
+- 将当前进程置为就绪状态（READY）；
+- 将当前进程加入到就绪队列的队尾；
+- 转进程调度。
 
 
 
 <a name="lab3_3_rrsched"></a>
+
 ## 5.4 lab3_3 循环轮转调度
 
 <a name="lab3_3_app"></a>
 
 #### **给定应用**
 
+```C
+  1 /*
+  2  * This app fork a child process to run.
+  3  * Loops in parent process and child process both can have
+  4  * cpu time to run because the kernel will yield when timer interrupt is triggered.
+  5  */
+  6
+  7 #include "user/user_lib.h"
+  8 #include "util/types.h"
+  9
+ 10 int main(void) {
+ 11   uint64 pid = fork();
+ 12   uint64 rounds = 100000000;
+ 13   uint64 interval = 10000000;
+ 14   uint64 a = 0;
+ 15   if (pid == 0) {
+ 16     printu("Child: Hello world! \n");
+ 17     for (uint64 i = 0; i < rounds; ++i) {
+ 18       if (i % interval == 0) printu("Child running %ld \n", i);
+ 19     }
+ 20   } else {
+ 21     printu("Parent: Hello world! \n");
+ 22     for (uint64 i = 0; i < rounds; ++i) {
+ 23       if (i % interval == 0) printu("Parent running %ld \n", i);
+ 24     }
+ 25   }
+ 26
+ 27   exit(0);
+ 28   return 0;
+ 29 }
+```
+
+和lab3_2类似，lab3_3给出的应用仍然是父子两个进程，他们的执行体都是两个大循环。但与lab3_2不同的是，这两个进程在执行各自循环体时，都没有主动释放CPU的动作。显然，这样的设计会导致某个进程长期占据CPU，而另一个进程无法得到执行。
+
+- 切换到lab3_3，继承lab3_2及之前实验所做的修改，并make后的直接运行结果：
+
+```bash
+//切换到lab3_3
+$ git checkout lab3_3_rrsched
+
+//继承lab3_2以及之前的答案
+$ git merge lab3_2_yield -m "continue to work on lab3_3"
+
+//重新构造
+$ make clean; make
+
+//运行构造结果
+$ spike ./obj/riscv-pke ./obj/app_two_long_loops
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
+free physical memory address: [0x0000000080010000, 0x0000000087ffffff]
+kernel memory manager is initializing ...
+KERN_BASE 0x0000000080000000
+physical address of _etext is: 0x0000000080005000
+kernel page table is on
+Switching to user mode...
+in alloc_proc. user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000
+User application is loading.
+Application: ./obj/app_two_long_loops
+CODE_SEGMENT added at mapped info offset:3
+Application program entry point (virtual address): 0x000000000001017c
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+User call fork.
+will fork a child from parent 0.
+in alloc_proc. user frame 0x0000000087faf000, user stack 0x000000007ffff000, user kstack 0x0000000087fae000
+do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
+going to insert process 1 to ready queue.
+Parent: Hello world!
+Parent running 0
+Parent running 10000000
+Ticks 0
+You need to further implement the timer handling in lab3_3.
+
+System is shutting down with exit code -1.
+```
+
+回顾实验1的[lab1_3](chapter3_traps.md#irq)，我们看到由于进程的执行体很长，执行过程中时钟中断被触发（输出中的“Ticks 0”）。显然，我们可以通过利用时钟中断来实现进程的循环轮转调度，避免由于一个进程的执行体过长，导致系统中其他进程无法得到调度的问题！
+
 <a name="lab3_3_content"></a>
 
 #### **实验内容**
 
+实现kernel/strap.c文件中的rrsched()函数，获得以下预期结果：
+
+```bash
+$ spike ./obj/riscv-pke ./obj/app_two_long_loops
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
+free physical memory address: [0x0000000080010000, 0x0000000087ffffff]
+kernel memory manager is initializing ...
+KERN_BASE 0x0000000080000000
+physical address of _etext is: 0x0000000080005000
+kernel page table is on
+Switching to user mode...
+in alloc_proc. user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000
+User application is loading.
+Application: ./obj/app_two_long_loops
+CODE_SEGMENT added at mapped info offset:3
+Application program entry point (virtual address): 0x000000000001017c
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+User call fork.
+will fork a child from parent 0.
+in alloc_proc. user frame 0x0000000087faf000, user stack 0x000000007ffff000, user kstack 0x0000000087fae000
+do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
+going to insert process 1 to ready queue.
+Parent: Hello world!
+Parent running 0
+Parent running 10000000
+Ticks 0
+Parent running 20000000
+Ticks 1
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child: Hello world!
+Child running 0
+Child running 10000000
+Ticks 2
+Child running 20000000
+Ticks 3
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+Parent running 30000000
+Ticks 4
+Parent running 40000000
+Ticks 5
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child running 30000000
+Ticks 6
+Child running 40000000
+Ticks 7
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+Parent running 50000000
+Parent running 60000000
+Ticks 8
+Parent running 70000000
+Ticks 9
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child running 50000000
+Child running 60000000
+Ticks 10
+Child running 70000000
+Ticks 11
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+Parent running 80000000
+Ticks 12
+Parent running 90000000
+Ticks 13
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+Child running 80000000
+Ticks 14
+Child running 90000000
+Ticks 15
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+User exit with code:0.
+going to schedule process 1 to run.
+User exit with code:0.
+no more ready processes, system shutdown now.
+System is shutting down with exit code 0.
+```
 
 <a name="lab3_3_guide"></a>
 
 #### **实验指导**
+
+实际上，如果单纯为了实现进程的轮转，避免单个进程长期霸占CPU的情况，只需要简单地在时钟中断被触发时做重新调度即可。然而，为了实现时间片的概念，以及控制进程在单时间片内获得的执行长度，我们在kernel/sched.h文件中定义了“时间片”的长度：
+
+```C
+  6 //length of a time slice, in number of ticks
+  7 #define TIME_SLICE_LEN  2
+```
+
+可以看到时间片的长度（TIME_SLICE_LEN）为2个ticks，这就意味着我们要每隔两个ticks触发一次进程重新调度动作。
+
+为配合调度的实现，我们在进程结构中定义了整型成员（参见[5.1.1](#subsec_process_structure)）tick_count，完善kernel/strap.c文件中的rrsched()函数，以实现循环轮转调度时，应采取的逻辑为：
+
+- 判断当前进程的tick_count加1后是否大于等于TIME_SLICE_LEN？
+- 若答案为yes，则应将当前进程的tick_count清零，并将当前进程加入就绪队列，转进程调度；
+- 若答案为no，则应将当前进程的tick_count加1，并返回。
 
 
 
