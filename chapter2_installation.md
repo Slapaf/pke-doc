@@ -2,11 +2,14 @@
 
 ### 目录  
 - [2.1 头歌平台](#educoder)  
-- [2.2 Ubuntu环境](#ubuntu)  
-- [2.3 openEuler操作系统](#openeuler)  
+- [2.2 Ubuntu操作系统的配置](#ubuntu)  
+- [2.3 openEuler操作系统配置](#openeuler)  
+- [2.4 riscv-pke（实验）代码的获取](#preparecode)
+
 
 
 <a name="educoder"></a>
+
 ## 2.1 头歌平台
 
 PKE实验在[头歌平台](https://www.educoder.net/)上进行了部署，但因为仍在测试阶段，所以没有开放全局选课（感兴趣的读者可以尝试邀请码：2T8MA）。PKE实验（2.0版本）将于2021年秋季在头歌平台重新上线，届时将开放全局选课。
@@ -18,7 +21,9 @@ PKE实验在[头歌平台](https://www.educoder.net/)上进行了部署，但因
 头歌平台为每个选课的学生提供了一个docker虚拟机，该虚拟机环境中已经配置好了所有开发套件（包括交叉编译器、Spike模拟器等），用户可以通过shell选项（*详细使用方法将待2.0上线时更新*）进入该docker环境在该docker环境中完成实验任务。
 
 
+
 <a name="ubuntu"></a>
+
 ## 2.2 Ubuntu环境
 
 实验环境我们推荐采用Ubuntu 16.04LTS或18.04LTS（x86_64）操作系统，我们未在其他系统（如arch，RHEL等）上做过测试，但理论上只要将实验中所涉及到的安装包替换成其他系统中的等效软件包，就可完成同样效果。另外，我们在EduCoder实验平台（网址：https://www.educoder.net ）上创建了本书的同步课程，课程的终端环境中已完成实验所需软件工具的安装，所以如果读者是在EduCoder平台上选择的本课程，则可跳过本节的实验环境搭建过程，直接进入通过终端（命令行）进入实验环境。
@@ -167,3 +172,145 @@ you need add your code!
 ## 2.3 openEuler操作系统
 
 PKE实验将提供基于华为openEuler操作系统的开发方法，*具体的华为云使用方法待续*，但在openEuler操作系统环境中的交叉编译器安装方法，以及其他环节都可参考[2.2 Ubuntu环境](#ubuntu)的命令进行。 
+
+
+
+<a name="preparecode"></a>
+
+## 2.4 riscv-pke（实验）代码的获取
+
+获取riscv-pke代码前，需要首先确认你已经按照[第二章](chapter2_installation.md)的要求完成了开发环境的构建（这里，我们假设环境是基于Ubuntu或者openEular，头歌环境下更多的是界面操作，所以无需通过命令行获取代码）。
+
+环境构建好后，通过以下命令下载实验1的代码：
+
+（克隆代码仓库）
+`$ git clone https://gitee.com/hustos/riscv-pke.git`
+
+克隆完成后，将在当前目录应该能看到riscv-pke目录。这时，可以到riscv-pke目录下查看文件结构，例如：
+
+`$ cd riscv-pke`
+
+（切换到lab1_1_syscall分支）
+`$ git checkout lab1_1_syscall`
+
+`$ tree -L 3`
+
+（将看到如下输出）
+
+```
+.
+├── LICENSE.txt
+├── Makefile
+├── README.md
+├── kernel
+│   ├── config.h
+│   ├── elf.c
+│   ├── elf.h
+│   ├── kernel.c
+│   ├── kernel.lds
+│   ├── machine
+│   │   ├── mentry.S
+│   │   └── minit.c
+│   ├── process.c
+│   ├── process.h
+│   ├── riscv.h
+│   ├── strap.c
+│   ├── strap.h
+│   ├── strap_vector.S
+│   ├── syscall.c
+│   └── syscall.h
+├── spike_interface
+│   ├── atomic.h
+│   ├── dts_parse.c
+│   ├── dts_parse.h
+│   ├── spike_file.c
+│   ├── spike_file.h
+│   ├── spike_htif.c
+│   ├── spike_htif.h
+│   ├── spike_memory.c
+│   ├── spike_memory.h
+│   ├── spike_utils.c
+│   └── spike_utils.h
+├── user
+│   ├── app_helloworld.c
+│   ├── user.lds
+│   ├── user_lib.c
+│   └── user_lib.h
+└── util
+    ├── functions.h
+    ├── load_store.S
+    ├── snprintf.c
+    ├── snprintf.h
+    ├── string.c
+    ├── string.h
+    └── types.h
+```
+
+在代码的根目录有以下文件：
+
+- Makefile文件，它是make命令即将使用的“自动化编译”脚本；
+
+- LICENSE.txt文件，即riscv-pke的版权文件，里面包含了所有参与开发的人员信息。riscv-pke是开源软件，你可以以任意方式自由地使用，前提是使用时包含LICENSE.txt文件即可；
+
+- README.md文件，一个简要的英文版代码说明。
+
+
+另外是一些子目录，其中：
+
+- kernel目录包含了riscv-pke的内核部分代码；
+- spike_interface目录是riscv-pke内核与spike模拟器的接口代码（如设备树DTB、主机设备接口HTIF等），用于接口的初始化和调用；
+- user目录包含了实验给定应用（如lab1_1中的app_helloworld.c），以及用户态的程序库文件（如lab1_1中的user_lib.c）；
+- util目录包含了一些内核和用户程序公用的代码，如字符串处理（string.c），类型定义（types.h）等。
+
+在代码的根目录输入以下命令：
+`$ make`
+进行构造（build），在环境已配好（特别是交叉编译器已加入系统路径）的情况下，输出如下：
+
+```
+compiling util/snprintf.c
+compiling util/string.c
+linking  obj/util.a ...
+Util lib has been build into "obj/util.a"
+compiling spike_interface/dts_parse.c
+compiling spike_interface/spike_htif.c
+compiling spike_interface/spike_utils.c
+compiling spike_interface/spike_file.c
+compiling spike_interface/spike_memory.c
+linking  obj/spike_interface.a ...
+Spike lib has been build into "obj/spike_interface.a"
+compiling kernel/syscall.c
+compiling kernel/elf.c
+compiling kernel/process.c
+compiling kernel/strap.c
+compiling kernel/kernel.c
+compiling kernel/machine/minit.c
+compiling kernel/strap_vector.S
+compiling kernel/machine/mentry.S
+linking obj/riscv-pke ...
+PKE core has been built into "obj/riscv-pke"
+compiling user/app_helloworld.c
+compiling user/user_lib.c
+linking obj/app_helloworld ...
+User app has been built into "obj/app_helloworld"
+```
+
+构造完成后，在代码根目录会出现一个obj子目录，该子目录包含了构造过程中所生成的所有对象文件（.o）、编译依赖文件（.d）、静态库（.a）文件，和最终目标ELF文件（如./obj/riscv-pke和./obj/app_helloworld）。
+
+这时，我们可以尝试借助riscv-pke内核运行app_helloworld的“Hello world!”程序：
+
+```
+$ spike ./obj/riscv-pke ./obj/app_helloworld
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+Application: ./obj/app_helloworld
+Application program entry point (virtual address): 0x0000000081000000
+Switching to user mode...
+call do_syscall to accomplish the syscall and lab1_1 here.
+
+System is shutting down with exit code -1.
+```
+
+自此，riscv-pke的代码获取（和验证）已完成。
+

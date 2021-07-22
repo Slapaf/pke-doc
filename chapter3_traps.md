@@ -3,13 +3,12 @@
 
 ### 目录  
 - [3.1 实验1的基础知识](#fundamental)  
-  - [3.1.1 获取riscv-pke代码](#subsec_preparecode) 
-  - [3.1.2 RISC-V程序的编译和链接](#subsec_compileandlink)
-  - [3.1.3 指定符号的逻辑地址](#subsec_lds)
-  - [3.1.4 代理内核的构造过程](#subsec_building)
-  - [3.1.5 代理内核的启动过程](#subsec_booting)
-  - [3.1.6 ELF文件（app）的加载过程](#subsec_elf)
-  - [3.1.7 spike的HTIF接口](#subsec_htif)
+  - [3.1.1 RISC-V程序的编译和链接](#subsec_compileandlink)
+  - [3.1.2 指定符号的逻辑地址](#subsec_lds)
+  - [3.1.3 代理内核的构造过程](#subsec_building)
+  - [3.1.4 代理内核的启动过程](#subsec_booting)
+  - [3.1.5 ELF文件（app）的加载过程](#subsec_elf)
+  - [3.1.6 spike的HTIF接口](#subsec_htif)
 - [3.2 lab1_1 系统调用](#syscall) 
   - [给定应用](#lab1_1_app)
   - [实验内容](#lab1_1_content)
@@ -29,148 +28,9 @@
 
 本章我们将首先[获得代码](#subsec_preparecode)，接下来介绍[程序的编译链接和ELF文件](#subsec_elfload)的基础知识，接着讲述riscv-pke操作系统内核的[启动原理](#subsec_booting)，最后开始实验1的3个实验。
 
-<a name="subsec_preparecode"></a>
-
-### 3.1.1 获取riscv-pke代码
-
-获取riscv-pke代码前，需要首先确认你已经按照[第二章](chapter2_installation.md)的要求完成了开发环境的构建（这里，我们假设环境是基于Ubuntu或者openEular，头歌环境下更多的是界面操作，所以无需通过命令行获取代码）。
-
-环境构建好后，通过以下命令下载实验1的代码：
-
-（克隆代码仓库）
-`$ git clone https://gitee.com/hustos/riscv-pke.git`
-
-克隆完成后，将在当前目录应该能看到riscv-pke目录。这时，可以到riscv-pke目录下查看文件结构，例如：
-
-`$ cd riscv-pke`
-
-（切换到lab1_1_syscall分支）
-`$ git checkout lab1_1_syscall`
-
-`$ tree -L 3`
-
-（将看到如下输出）
-
-```
-.
-├── LICENSE.txt
-├── Makefile
-├── README.md
-├── kernel
-│   ├── config.h
-│   ├── elf.c
-│   ├── elf.h
-│   ├── kernel.c
-│   ├── kernel.lds
-│   ├── machine
-│   │   ├── mentry.S
-│   │   └── minit.c
-│   ├── process.c
-│   ├── process.h
-│   ├── riscv.h
-│   ├── strap.c
-│   ├── strap.h
-│   ├── strap_vector.S
-│   ├── syscall.c
-│   └── syscall.h
-├── spike_interface
-│   ├── atomic.h
-│   ├── dts_parse.c
-│   ├── dts_parse.h
-│   ├── spike_file.c
-│   ├── spike_file.h
-│   ├── spike_htif.c
-│   ├── spike_htif.h
-│   ├── spike_memory.c
-│   ├── spike_memory.h
-│   ├── spike_utils.c
-│   └── spike_utils.h
-├── user
-│   ├── app_helloworld.c
-│   ├── user.lds
-│   ├── user_lib.c
-│   └── user_lib.h
-└── util
-    ├── functions.h
-    ├── load_store.S
-    ├── snprintf.c
-    ├── snprintf.h
-    ├── string.c
-    ├── string.h
-    └── types.h
-```
-
-在代码的根目录有以下文件：
-
-- Makefile文件，它是make命令即将使用的“自动化编译”脚本；
-
-- LICENSE.txt文件，即riscv-pke的版权文件，里面包含了所有参与开发的人员信息。riscv-pke是开源软件，你可以以任意方式自由地使用，前提是使用时包含LICENSE.txt文件即可；
-
-- README.md文件，一个简要的英文版代码说明。
-
-
-另外是一些子目录，其中：
-
-- kernel目录包含了riscv-pke的内核部分代码；
-- spike_interface目录是riscv-pke内核与spike模拟器的接口代码（如设备树DTB、主机设备接口HTIF等），用于接口的初始化和调用；
-- user目录包含了实验给定应用（如lab1_1中的app_helloworld.c），以及用户态的程序库文件（如lab1_1中的user_lib.c）；
-- util目录包含了一些内核和用户程序公用的代码，如字符串处理（string.c），类型定义（types.h）等。
-
-在代码的根目录输入以下命令：
-`$ make`
-进行构造（build），在环境已配好（特别是交叉编译器已加入系统路径）的情况下，输出如下：
-
-```
-compiling util/snprintf.c
-compiling util/string.c
-linking  obj/util.a ...
-Util lib has been build into "obj/util.a"
-compiling spike_interface/dts_parse.c
-compiling spike_interface/spike_htif.c
-compiling spike_interface/spike_utils.c
-compiling spike_interface/spike_file.c
-compiling spike_interface/spike_memory.c
-linking  obj/spike_interface.a ...
-Spike lib has been build into "obj/spike_interface.a"
-compiling kernel/syscall.c
-compiling kernel/elf.c
-compiling kernel/process.c
-compiling kernel/strap.c
-compiling kernel/kernel.c
-compiling kernel/machine/minit.c
-compiling kernel/strap_vector.S
-compiling kernel/machine/mentry.S
-linking obj/riscv-pke ...
-PKE core has been built into "obj/riscv-pke"
-compiling user/app_helloworld.c
-compiling user/user_lib.c
-linking obj/app_helloworld ...
-User app has been built into "obj/app_helloworld"
-```
-
-构造完成后，在代码根目录会出现一个obj子目录，该子目录包含了构造过程中所生成的所有对象文件（.o）、编译依赖文件（.d）、静态库（.a）文件，和最终目标ELF文件（如./obj/riscv-pke和./obj/app_helloworld）。
-
-这时，我们可以尝试借助riscv-pke内核运行app_helloworld的“Hello world!”程序：
-
-```
-$ spike ./obj/riscv-pke ./obj/app_helloworld
-In m_start, hartid:0
-HTIF is available!
-(Emulated) memory size: 2048 MB
-Enter supervisor mode...
-Application: ./obj/app_helloworld
-Application program entry point (virtual address): 0x0000000081000000
-Switching to user mode...
-call do_syscall to accomplish the syscall and lab1_1 here.
-
-System is shutting down with exit code -1.
-```
-
-自此，riscv-pke的代码获取（和验证）已完成。
-
 <a name="subsec_compileandlink"></a>
 
-### 3.1.2 RISC-V程序的编译和链接
+### 3.1.1 RISC-V程序的编译和链接
 
 下面，我们将简要介绍RISC-V程序的编译和链接相关知识。这里，我们仍然假设你已经按照[第二章](chapter2_installation.md)的要求完成了基于Ubuntu或者openEular的开发环境构建，如果是在头歌平台，可以通过他们提供的交互??进入终端使用（里面的交叉编译器已经安装且已加入系统路径）。在PKE实验的开发环境中，我们通过模拟器（spike）所构建的目标机是risc-v机器，而主机一般采用的是采用x86指令集的Intel处理器（openEular可能采用的是基于ARM指令集的华为鲲鹏处理器），在这种配置下我们的程序，包括PKE操作系统内核以及应用都通过交叉编译器所提供的工具进行编译和链接。虽然risc-v交叉编译器和主机环境下的GCC是同一套体系，但它的使用和输出还是有些细微的不同，所以有必要对它进行一定的了解。
 
@@ -371,7 +231,7 @@ Disassembly of section .text:
 
 <a name="subsec_lds"></a>
 
-### 3.1.3 指定符号的逻辑地址
+### 3.1.2 指定符号的逻辑地址
 
 编译器在链接过程中，一个重要的任务就是为源程序中的符号（symbol）赋予逻辑地址。例如，在以上`sections`的例子中，我们通过`objdump`命令，得知helloworld.c源文件的main函数所对应的逻辑地址为0x000000000001014e，而且对于任意ELF中的段（segment）或节（section）而言，它的逻辑地址必然是从某个地址开始的一段连续地址空间。
 
@@ -471,7 +331,7 @@ Disassembly of section .text:
 
 <a name="subsec_building"></a>
 
-### 3.1.4 代理内核的构造过程
+### 3.1.3 代理内核的构造过程
 
 这里我们讨论lab1_1中代理内核，以及其上运行的应用的构造（build）过程。PKE实验采用了Linux中广泛采用的make软件包完成内核、支撑库，以及应用的构造。关于Makefile的编写，我们建议读者阅读[这篇文章](https://blog.csdn.net/foryourface/article/details/34058577)了解make文件的基础知识，这里仅讨论lab1_1的Makefile以及对应的构造过程。PKE的后续实验实际上采用的Makefile跟lab1_1的非常类似，所以我们在后续章节中不再对它们的构建过程进行讨论。
 
@@ -604,7 +464,7 @@ Disassembly of section .text:
 
 <a name="subsec_booting"></a>
 
-### 3.1.5 代理内核的启动过程
+### 3.1.4 代理内核的启动过程
 
 
 在3.1.1中，我们获取riscv-pke的代码并完成构造步骤后，我们将通过以下命令开始lab1_1所给定的应用的执行：
@@ -871,7 +731,7 @@ s_start函数在kernel/kernel.c文件中定义：
 
 <a name="subsec_elf"></a>
 
-### 3.1.6 ELF文件（app）的加载过程
+### 3.1.5 ELF文件（app）的加载过程
 
 这里我们对load_user_program()函数进行讨论，它在kernel/kernel.c中定义：
 
@@ -982,7 +842,7 @@ s_start函数在kernel/kernel.c文件中定义：
 
 <a name="subsec_htif"></a>
 
-### 3.1.7 spike的HTIF接口
+### 3.1.6 spike的HTIF接口
 
 spike提供的HTIF（Host-Target InterFace）接口的原理可以用下图说明：
 
