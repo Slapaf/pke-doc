@@ -1,16 +1,20 @@
-# 第二章．实验环境的安装与使用
+# 第二章．实验环境配置与实验构成
 
 ### 目录  
-- [2.1 头歌平台](#educoder)  
-- [2.2 Ubuntu操作系统的配置](#ubuntu)  
-- [2.3 openEuler操作系统配置](#openeuler)  
-- [2.4 riscv-pke（实验）代码的获取](#preparecode)
+- [2.1 实验环境安装](#environments)
+  - [2.1.1 头歌平台](#subsec_educoder)  
+  - [2.1.2 Ubuntu操作系统环境](#subsec_ubuntu)  
+  - [2.1.3 openEuler操作系统环境](#subsec_openeuler)  
+- [2.2 riscv-pke（实验）代码的获取](#preparecode)
+- [2.3 PKE实验构成](#pke_experiemnts)
 
+<a name="environments"></a>
 
+## 2.1 实验环境安装
 
-<a name="educoder"></a>
+<a name="subsec_educoder"></a>
 
-## 2.1 头歌平台
+### 2.1.1 头歌平台
 
 PKE实验在[头歌平台](https://www.educoder.net/)上进行了部署，但因为仍在测试阶段，所以没有开放全局选课（感兴趣的读者可以尝试邀请码：2T8MA）。PKE实验（2.0版本）将于2021年秋季在头歌平台重新上线，届时将开放全局选课。
 
@@ -22,17 +26,21 @@ PKE实验在[头歌平台](https://www.educoder.net/)上进行了部署，但因
 
 
 
-<a name="ubuntu"></a>
+<a name="subsec_ubuntu"></a>
 
-## 2.2 Ubuntu环境
+### 2.1.2 Ubuntu操作系统环境
 
 实验环境我们推荐采用Ubuntu 16.04LTS或18.04LTS（x86_64）操作系统，我们未在其他系统（如arch，RHEL等）上做过测试，但理论上只要将实验中所涉及到的安装包替换成其他系统中的等效软件包，就可完成同样效果。另外，我们在EduCoder实验平台（网址：https://www.educoder.net ）上创建了本书的同步课程，课程的终端环境中已完成实验所需软件工具的安装，所以如果读者是在EduCoder平台上选择的本课程，则可跳过本节的实验环境搭建过程，直接进入通过终端（命令行）进入实验环境。
 
-PKE实验涉及到的软件工具有：RISC-V交叉编译器、spike模拟器，以及PKE源代码三个部分。假设读者拥有了Ubuntu 16.04LTS或18.04LTS（x86_64）操作系统的环境，以下分别介绍这三个部分的安装以及安装后的检验过程。需要说明的是，为了避免耗时耗资源的构建（build）过程，一个可能的方案是从https://toolchains.bootlin.com 下载，**但是要注意一些依赖包（如GCC）的版本号**。
+PKE实验涉及到的工具软件有：
 
-**我们强烈建议读者在新装环境中完整构建（build）RISC-V交叉编译器，以及spike模拟器**。如果强调环境的可移植性，可以考虑在虚拟机中安装完整系统和环境，之后将虚拟机进行克隆和迁移。
+- RISC-V交叉编译器（及附带的主机编译器、构造工具等）；
+- spike模拟器；
 
-### 2.1.1 RISC-V交叉编译器
+
+以下分别介绍这两个部分的安装过程。对于新安装的Ubuntu操作系统，**我们强烈建议读者在新装环境中完整构建（build）RISC-V交叉编译器，以及spike模拟器**。（对于熟练用户）为了避免耗时且耗资源的构建（build）过程，一个可能的方案是从https://toolchains.bootlin.com 下载，**但是要注意一些依赖包（如GCC）的版本号**。如果强调环境的可移植性，可以考虑在虚拟机中安装完整系统和环境，之后将虚拟机进行克隆和迁移。
+
+#### 2.1.1 RISC-V交叉编译器
 
 RISC-V交叉编译器是与Linux自带的GCC编译器类似的一套工具软件集合，不同的是，x86_64平台上Linux自带的GCC编译器会将源代码编译、链接成为适合在x86_64平台上运行的二进制代码（称为native code），而RISC-V交叉编译器则会将源代码编译、链接成为在RISC-V平台上运行的代码。后者（RISC-V交叉编译器生成的二进制代码）是无法在x86_64平台（即x86_64架构的Ubuntu环境下）直接运行的，它的运行需要模拟器（我们采用的spike）的支持。
 
@@ -78,7 +86,7 @@ RISC-V交叉编译器的构建需要一些本地支撑软件包，可使用以�
 
 以上命令设置了RISCV环境变量，指向在第三步中的安装目录，并且将交叉编译器的可执行文件所在的目录加入到了系统路径中。这样，我们就可以在PKE的工作目录调用RISC-V交叉编译器所包含的工具软件了。
 
-### 2.1.2 spike模拟器
+#### 2.1.2 spike模拟器
 
 接下来，安装spkie模拟器。首先取得spike的源代码，有两个途径：一个是从github代码仓库中获取：
 
@@ -98,78 +106,11 @@ RISC-V交叉编译器的构建需要一些本地支撑软件包，可使用以�
 
 在以上命令中，我们假设RISCV环境变量已经指向了RISC-V交叉编译器的安装目录。如果未建立关联，可以将$RISCV替换为2.1.1节中的[your.RISCV.install.path]。
 
-### 2.1.3 PKE
 
-到github下载课程仓库：
 
-`$ git clone https://github.com/MrShawCode/pke.git`
+<a name="subsec_openeuler"></a>
 
-克隆完成后，将在当前目录看到pke目录。这时，可以到pke目录下查看pke的代码结构，例如：
-
-`$ cd pke`
-
-`$ ls`
-
-你可以看到当前目录下有如下（部分）内容
-
-.
-
-├── app
-
-├── gradelib.py
-
-├── machine
-
-├── Makefile
-
-├── pk
-
-├── pke-lab1
-
-├── pke.lds
-
-└── util
-
-● 首先是app目录，里面存放的是实验的测试用例，也就是运行在User模式的应用程序，例如之前helloworld.c。
-
-● gradelib.py、与pke-lab1是测试用的python脚本。
-
-● machine目录，里面存放的是机器模式相关的代码，由于本课程的重点在于操作系统，在这里你可以无需详细研究。
-
-● Makefile文件，它定义的整个工程的编译规则。
-
-● pke.lds是工程的链接文件。
-
-● util目录下是各模块会用到的工具函数。
-
-● pk目录，里面存放的是pke的主要代码。
-
-即使未开始做PKE的实验，我们的pke代码也是可构建的，可以采用以下命令（在pke目录下）生成pke代理内核：
-
-`$ make`
-
-以上命令完成后，会在当前目录下会生产obj子目录，里面就包含了我们的pke代理内核。pke代理内核的构建过程，将在2.2节中详细讨论。
-
-### 2.1.4 环境测试
-
-全部安装完毕后，你可以对环境进行测试，在pke目录下输入：
-
-`$ spike ./obj/pke ./app/elf/app1_2`
-
-将得到如下输出：
-
-```
-PKE IS RUNNING
-user mode test illegal instruction!
-you need add your code!
-```
-
-以上命令的作用是首先采用spike模拟一个RISC-V机器，该机器支持RV64G指令集，并在该机器上运行./app/elf/app1_2应用（它的源代码在./app/app1_2.c中）。我们知道，应用是无法在“裸机”上运行的，所以测试命令使用./obj/pke作为应用的代理内核。代理内核的作用，是对spike模拟出来的RISC-V机器做简单的“包装”，使其能够在spike模拟出来的机器上顺利运行。
-
-这里，代理内核的作用是只为特定的应用服务（如本例中的./app/elf/app1_2应用），所以可以做到“看菜吃饭”的效果。因为我们这里的应用非常简单，所以pke就可以做得极其精简，它没有文件系统、没有物理内存管理、没有进程调度、没有操作终端（shell）等等传统的完整操作系统“必须”具有的组件。在后续的实验中，我们将不断提升应用的复杂度，并不断完善代理内核。通过这个过程，读者将深刻体会操作系统内核对应用支持的机制，以及具体的实现细节。
-
-<a name="openeuler"></a>
-## 2.3 openEuler操作系统
+### 2.1.3 openEuler操作系统
 
 PKE实验将提供基于华为openEuler操作系统的开发方法，*具体的华为云使用方法待续*，但在openEuler操作系统环境中的交叉编译器安装方法，以及其他环节都可参考[2.2 Ubuntu环境](#ubuntu)的命令进行。 
 
@@ -177,20 +118,32 @@ PKE实验将提供基于华为openEuler操作系统的开发方法，*具体的�
 
 <a name="preparecode"></a>
 
-## 2.4 riscv-pke（实验）代码的获取
+## 2.2 riscv-pke（实验）代码的获取
 
-获取riscv-pke代码前，需要首先确认你已经按照[第二章](chapter2_installation.md)的要求完成了开发环境的构建（这里，我们假设环境是基于Ubuntu或者openEular，头歌环境下更多的是界面操作，所以无需通过命令行获取代码）。
+以下讨论，我们假设读者是使用的Ubuntu/openEuler操作系统，且已按照[2.1.2](#subsec_ubuntu)的说明安装了需要的工具软件。对于头歌平台而言，代码已经部署到实验环境，读者可以通过头歌网站界面或者界面上的“命令行”选项看到实验代码，所以头歌平台用户无须考虑代码获取环节。
 
-环境构建好后，通过以下命令下载实验1的代码：
+#### 代码获取
+
+在Ubuntu/openEuler操作系统，可以通过以下命令下载riscv-pke的实验代码：
 
 （克隆代码仓库）
-`$ git clone https://gitee.com/hustos/riscv-pke.git`
 
-克隆完成后，将在当前目录应该能看到riscv-pke目录。这时，可以到riscv-pke目录下查看文件结构，例如：
+```
+`$ git clone https://gitee.com/hustos/riscv-pke-prerelease.git
+Cloning into 'riscv-pke-prerelease'...
+remote: Enumerating objects: 195, done.
+remote: Counting objects: 100% (195/195), done.
+remote: Compressing objects: 100% (195/195), done.
+remote: Total 227 (delta 107), reused 1 (delta 0), pack-reused 32
+Receiving objects: 100% (227/227), 64.49 KiB | 335.00 KiB/s, done.
+Resolving deltas: 100% (107/107), done.`
+```
 
-`$ cd riscv-pke`
+克隆完成后，将在当前目录应该能看到riscv-pke-prerelease目录。这时，可以到riscv-pke目录下查看文件结构，例如：
 
-（切换到lab1_1_syscall分支）
+`$ cd riscv-pke-prerelease`
+
+切换到lab1_1_syscall分支（因为lab1_1_syscall是默认分支，这里也可以不切换）
 `$ git checkout lab1_1_syscall`
 
 `$ tree -L 3`
@@ -202,6 +155,7 @@ PKE实验将提供基于华为openEuler操作系统的开发方法，*具体的�
 ├── LICENSE.txt
 ├── Makefile
 ├── README.md
+├── grade.py
 ├── kernel
 │   ├── config.h
 │   ├── elf.c
@@ -262,11 +216,12 @@ PKE实验将提供基于华为openEuler操作系统的开发方法，*具体的�
 - user目录包含了实验给定应用（如lab1_1中的app_helloworld.c），以及用户态的程序库文件（如lab1_1中的user_lib.c）；
 - util目录包含了一些内核和用户程序公用的代码，如字符串处理（string.c），类型定义（types.h）等。
 
-在代码的根目录输入以下命令：
-`$ make`
-进行构造（build），在环境已配好（特别是交叉编译器已加入系统路径）的情况下，输出如下：
+#### 环境验证
+
+对于Ubuntu/openEuler用户（对于头歌用户，可以通过选择“命令行”标签，进入shell环境、进入提示的代码路径，开始构造过程），可以在代码的根目录（进入riscv-pke-prerelease子目录后）输入以下构造命令，应看到如下输出：
 
 ```
+$ make
 compiling util/snprintf.c
 compiling util/string.c
 linking  obj/util.a ...
@@ -294,6 +249,8 @@ linking obj/app_helloworld ...
 User app has been built into "obj/app_helloworld"
 ```
 
+如果环境安装不对（如缺少必要的支撑软件包），以上构造过程可能会在中间报错，如果碰到报错情况，请回到[2.2](#environments)的环境安装过程检查实验环境的正确性。
+
 构造完成后，在代码根目录会出现一个obj子目录，该子目录包含了构造过程中所生成的所有对象文件（.o）、编译依赖文件（.d）、静态库（.a）文件，和最终目标ELF文件（如./obj/riscv-pke和./obj/app_helloworld）。
 
 这时，我们可以尝试借助riscv-pke内核运行app_helloworld的“Hello world!”程序：
@@ -312,5 +269,15 @@ call do_syscall to accomplish the syscall and lab1_1 here.
 System is shutting down with exit code -1.
 ```
 
-自此，riscv-pke的代码获取（和验证）已完成。
+如果能看到以上输出，riscv-pke的代码获取（和验证）就已经完成，可以开始实验了。
+
+<a name="pke_experiemnts"></a>
+
+## 2.3 PKE实验的组成
+
+
+
+<img src="pictures/experiment_organization.png" alt="experiment_organization" style="zoom:100%;" />
+
+
 
