@@ -13,10 +13,11 @@
 - [1.6 什么是代理内核](chapter1_riscv.md#proxykernel)  
 - [1.7 相关工具软件](chapter1_riscv.md#toolsoftware)  
 
-[第二章. 实验环境的安装与使用](chapter2_installation.md)  
- - [2.1 头歌平台](chapter2_installation.md#educoder)  
- - [2.2 Ubuntu环境](chapter2_installation.md#ubuntu)  
- - [2.3 openEuler操作系统](chapter2_installation.md#openeuler)  
+[第二章. 实验环境配置与实验构成](chapter2_installation.md)  
+
+ - [2.1 实验环境安装](chapter2_installation.md#environments)  
+ - [2.2 riscv-pke（实验）代码的获取](chapter2_installation.md#preparecode)  
+ - [2.3 PKE实验的组成](chapter2_installation.md#pke_experiemnts)  
 
 [第三章. 实验1：系统调用、异常和外部中断](chapter3_traps.md)  
  - [3.1 实验1的基础知识](chapter3_traps.md#fundamental)   
