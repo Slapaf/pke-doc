@@ -21,9 +21,13 @@
   - [给定应用](#lab1_3_app)
   - [实验内容](#lab1_3_content)
   - [实验指导](#lab1_3_guide)
+- [3.5 lab1_challenge1 挑战一：打印用户程序调用栈](#lab1_challenge1_backtrace) 
+  - [给定应用](#lab1_challenge1_app)
+  - [实验内容](#lab1_challenge1_content)
+  - [实验指导](#lab1_challenge1_guide)
+
 
 <a name="fundamental"></a>
-
 ## 3.1 实验1的基础知识
 
 本章我们将首先[获得代码](#subsec_preparecode)，接下来介绍[程序的编译链接和ELF文件](#subsec_elfload)的基础知识，接着讲述riscv-pke操作系统内核的[启动原理](#subsec_booting)，最后开始实验1的3个实验。
@@ -1541,7 +1545,7 @@ System is shutting down with exit code 0.
 
 <a name="lab1_challenge1_backtrace"></a>
 
-## 3.4 lab1_challenge1 挑战一：打印用户程序调用栈
+## 3.5 lab1_challenge1 挑战一：打印用户程序调用栈
 
 <a name="lab1_challenge1_app"></a>
 
