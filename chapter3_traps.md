@@ -1539,3 +1539,112 @@ System is shutting down with exit code 0.
 
 那么handle_mtimer_trap()需要完成哪些“后续动作”呢？首先，我们看到在该函数上面定义了一个全局变量g_ticks，用它来对时钟中断的次数进行计数，而第31行会输出该计数。为了确保我们的系统持续正常运行，该计数应每次都会完成加一操作。所以，handle_mtimer_trap()首先需要对g_ticks进行加一；其次，由于处理完中断后，SIP（Supervisor Interrupt Pending，即S模式的中断等待寄存器）寄存器中的SIP_SSIP位仍然为1（由M态的中断处理函数设置），如果该位持续为1的话会导致我们的模拟RISC-V机器始终处于中断状态。所以，handle_mtimer_trap()还需要对SIP的SIP_SSIP位清零，以保证下次再发生时钟中断时，M态的函数将该位置一会导致S模式的下一次中断。
 
+<a name="lab1_challenge1_backtrace"></a>
+
+## 3.4 lab1_challenge1 挑战一：打印用户程序调用栈
+
+<a name="lab1_challenge1_app"></a>
+
+#### **给定应用**
+
+- user/app_print_backtrace.c
+
+```c
+  1 /*
+  2  * Below is the given application for lab1_challenge1_backtrace.
+  3  * This app prints all functions before calling print_backtrace().
+  4  */
+  5
+  6 #include "user_lib.h"
+  7 #include "util/types.h"
+  8
+  9 void f8() { print_backtrace(7); }
+ 10 void f7() { f8(); }
+ 11 void f6() { f7(); }
+ 12 void f5() { f6(); }
+ 13 void f4() { f5(); }
+ 14 void f3() { f4(); }
+ 15 void f2() { f3(); }
+ 16 void f1() { f2(); }
+ 17
+ 18 int main(void) {
+ 19   printu("back trace the user app in the following:\n");
+ 20   f1();
+ 21   exit(0);
+ 22   return 0;
+ 23 }
+```
+
+以上程序在真正调用系统调用print_backtrace(7)之前的函数调用关系比复杂，图示起来有以下关系：
+
+main -> f1 -> f2 -> f3 -> f4 -> f5 -> f6 -> f7 -> f8
+
+print_backtrace(7)的作用是将以上用户程序的函数调用关系，从最后的f8向上打印7层，预期的输出为：
+
+```
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+Application: obj/app_print_backtrace
+Application program entry point (virtual address): 0x0000000081000072
+Switching to user mode...
+back trace the user app in the following:
+f8
+f7
+f6
+f5
+f4
+f3
+f2
+User exit with code:0.
+System is shutting down with exit code 0.
+```
+
+<a name="lab1_challenge1_content"></a>
+
+####  实验内容
+
+本实验为挑战实验，基础代码将继承和使用lab1_3完成后的代码：
+
+- 切换到lab1_3、继承lab1_2中所做修改：
+
+```bash
+//切换到lab1_challenge1_backtrace
+$ git checkout lab1_challenge1_backtrace
+
+//继承lab1_3以及之前的答案
+$ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
+```
+
+注意：**不同于基础实验，挑战实验的基础代码具有更大的不完整性，可能无法直接通过构造过程。**例如，由于以上的用户代码中print_backtrace()系统调用并未实现，所以构造时就会报错。同样，不同于基础实验，我们在代码中也并未专门地哪些地方的代码需要填写，哪些地方的代码无须填写。这样，我们留个读者更大的“想象空间”。
+
+- 本实验的具体要求为：
+
+通过修改PKE内核，来实现从给定应用（user/app_print_backtrace.c）到预期输出的转换。
+
+对于print_backtrace()函数的实现要求：
+
+应用程序调用print_backtrace()时，应能够通过控制输入的参数（如例子user/app_print_backtrace.c中的7）控制回溯的层数。例如，如果调用print_backtrace(5)则只输出5层回溯；如果调用print_backtrace(100)，则应只回溯到main函数就停止回溯（因为调用的深度小于100）。
+
+- 讨论的简化
+
+实验可以对中间函数，如user/app_print_backtrace.c中的f1到f8，进行讨论上的简化，可假设它们都不带参数。
+
+
+
+<a name="lab1_challenge1_guide"></a>
+
+####  实验指导
+
+为完成该挑战，PKE内核的完善应包含以下内容：
+
+- 系统调用路径上的完善，可参见[3.2](#syscall)中的知识；
+- 在操作系统内核中获取用户程序的栈。这里需要注意的是，PKE系统中当用户程序通过系统调用陷入到内核时，会切换到S模式的“用户内核”栈，而不是在用户栈上继续操作。我们的print_backtrace()函数的设计目标是回溯并打印用户进程的函数调用情况，所以，进入操作系统内核后，需要找到用户进程的用户态栈来开始回溯；
+- 找到用户态栈后，我们需要了解用户态栈的结构。实际上，这一点在我们的第一章就有[举例](chapter1_riscv.md#call_stack_structure)来说明，读者可以回顾一下第一章的例子。另外，由于我们可以对讨论进行简化（即假设中间函数无参数），那么单次函数调用的栈深度我们也可以进行相应的假设；
+- 通过用户栈找到函数的返回地址后，需要将虚拟地址转换为源程序中的符号。这一点，读者需要了解ELF文件中的符号节（.symtab section），以及字符串节（.strtab section）的相关知识，了解这两个节（section）里存储的内容以及存储的格式等内容。对ELF的这两个节，网上有大量的介绍，例如[这里](https://blog.csdn.net/edonlii/article/details/8779075)。
+
+**注意：完成实验内容后，请读者另外编写应用，通过调用print_backtrace()函数，并带入不同的深度参数，对自己的实现进行检测。**
+
+
+

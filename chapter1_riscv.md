@@ -298,6 +298,8 @@ clobbered_regs（破坏描述部分）
 
 我们仍然以例1.1为例分析RISC-V程序执行过程中，栈的变化。RISC-V并未提供push和pop指令，所以函数开始时对sp寄存器的操作都是RISC-V版本的入栈动作。例如，main函数中的“addi sp,sp,-16”指令，将sp减去16然后赋值给sp，其实质是在栈顶“空出”16个字节的空间，然后将必要的内容进行压栈。如后续的“sd ra,8(sp)”就是将返回地址（ra寄存器中的内容）压栈；而“sd s0,0(sp)”是将fp寄存器中的内容压栈（s0和fp是同一个寄存器，参见表1.1）。例1.1中程序从main函数到bar函数的函数调用过程中，它的程序栈将形成图1.2中所示的结构：
 
+<a name="call_stack_structure"></a>
+
  <img src="pictures/fig1_2.png" alt="fig1_2" style="zoom:80%;" />
 
 图1.2 例1.1程序的函数调用栈结构（从main函数到bar函数）
