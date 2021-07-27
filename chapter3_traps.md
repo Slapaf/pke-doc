@@ -25,6 +25,10 @@
   - [给定应用](#lab1_challenge1_app)
   - [实验内容](#lab1_challenge1_content)
   - [实验指导](#lab1_challenge1_guide)
+- [3.6 lab1_challenge2 挑战二：打印异常代码行](#lab1_challenge2_errorline) 
+  - [给定应用](#lab1_challenge2_app)
+  - [实验内容](#lab1_challenge2_content)
+  - [实验指导](#lab1_challenge2_guide)
 
 
 <a name="fundamental"></a>
@@ -1650,5 +1654,80 @@ $ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
 
 **注意：完成实验内容后，请读者另外编写应用，通过调用print_backtrace()函数，并带入不同的深度参数，对自己的实现进行检测。**
 
+<a name="lab1_challenge2_errorline"></a>
 
+# 3.6 lab1_challenge2 挑战二：打印异常代码行
 
+<a name="lab1_challenge2_app"></a>
+
+#### **给定应用**
+
+- user/app_print_errorline.c
+
+```c
+  1 /*                                                                          
+  2  * Below is the given application for lab1_challenge2_errorline.
+  3  * This app performs a misaligned memory load operation.
+  4  */
+  5 
+  6 #include "user_lib.h"
+  7 #include "util/types.h"
+  8 
+  9 int main(void) {
+ 10     // load a dword(8 bytes) from address 0x80000001,
+ 11     // this will throw a load address misaligned exception.
+ 12     asm volatile ("li s2, 0x80000001\nld s2, (s2)");
+ 13     exit(0); return 0;
+ 14 }
+```
+
+以上程序在地址0x80000001处读取一个8字节的双字，按照spike的要求，读取双字时地址需要按8字节对齐，因此此处会触发Load address misaligned异常，你的任务是**修改内核（包括machine文件夹下）的代码，使得用户程序在发生异常时，内核能够输出触发异常的用户程序的源文件名和对应代码行**，如上面的应用预期输出如下：
+
+```
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+Application: obj/app_long_loop
+Application program entry point (virtual address): 0x000000008100007e
+Switching to user mode...
+Runtime error at user/app_long_loop.c:12
+    asm volatile ("li s2, 0x80000001\nld s2, (s2)");
+Misaligned Load!
+System is shutting down with exit code -1.
+```
+
+<a name="lab1_challenge2_content"></a>
+
+####  实验内容
+
+本实验为挑战实验，基础代码将继承和使用lab1_3完成后的代码：
+
+- 切换到lab1_3、继承lab1_2中所做修改：
+
+```bash
+//切换到lab1_challenge2_errorline
+$ git checkout lab1_challenge2_errorline
+
+//继承lab1_3以及之前的答案
+$ git merge lab1_3_irq -m "continue to work on lab1_challenge2"
+```
+
+注意：**不同于基础实验，挑战实验的基础代码具有更大的不完整性，可能无法直接通过构造过程。**同样，不同于基础实验，我们在代码中也并未专门地哪些地方的代码需要填写，哪些地方的代码无须填写。这样，我们留给读者更大的“想象空间”。
+
+- 本实验的具体要求为：通过修改PKE内核（包括machine文件夹下的代码），使得用户程序在发生异常时，内核能够输出触发异常的用户程序的源文件名和对应代码行。
+
+- 注意：虽然在示例的app_print_errorline.c中只触发了读取内存地址不对齐异常，但最终测试时你的内核也应能够对其他会导致panic的异常和其他源文件输出正确的结果。
+- 文件名规范：需要包含路径，如果是用户源程序发生的错误，路径为相对路径，如果是调用的标准库内发生的错误，路径为绝对路径。
+
+<a name="lab1_challenge2_guide"></a>
+
+####  实验指导
+
+* 为完成该挑战，需要利用用户程序编译时产生的**调试信息**，目前最广泛使用的调试信息格式是DWARF，可以参考[这里](https://wiki.osdev.org/DWARF)了解其格式，该网站的参考文献中也给出了DWARF的完整文档地址，必要时可参考。
+* 你对内核代码的修改可能包含以下内容：
+  * 修改读取elf文件的代码，找到包含调试信息的段，将其内容保存起来（可以保存在用户程序的地址空间中）
+  * 对调试信息进行解析，构造指令地址-源代码行号-源代码文件名的对应表，注意，连续行号对应的不一定是连续的地址，因为一条源代码可以对应多条指令
+  * 在异常中断处理函数中，通过相应寄存器找到触发异常的指令地址，然后在上述表中查找地址对应的源代码行号和文件名输出
+
+**注意：完成实验内容后，请读者另外编写应用，触发不同异常，对自己的实现进行检测。**
