@@ -3,8 +3,9 @@
 ### 目录  
 - [2.1 实验环境安装](#environments)
   - [2.1.1 头歌平台](#subsec_educoder)  
-  - [2.1.2 Ubuntu操作系统环境](#subsec_ubuntu)  
-  - [2.1.3 openEuler操作系统环境](#subsec_openeuler)  
+  - [2.1.2 Windows环境（WSL）](#subsec_windows)
+  - [2.1.3 Ubuntu操作系统环境](#subsec_ubuntu)  
+  - [2.1.4 openEuler操作系统环境](#subsec_openeuler)  
 - [2.2 riscv-pke（实验）代码的获取](#preparecode)
 - [2.3 PKE实验构成](#pke_experiemnts)
 
@@ -26,7 +27,7 @@ PKE实验在[头歌平台](https://www.educoder.net/)上进行了部署，但因
 
 
 
-<a name="subsec_ubuntu"></a>
+<a name="subsec_windows"></a>
 
 ### 2.1.2 Windows环境（WSL）
 
@@ -120,9 +121,9 @@ RISC-V交叉编译器的构建需要一些本地支撑软件包，可使用以�
 
 <a name="subsec_openeuler"></a>
 
-### 2.1.3 openEuler操作系统
+### 2.1.4 openEuler操作系统
 
-PKE实验将提供基于华为openEuler操作系统的开发方法，*具体的华为云使用方法待续*，但在openEuler操作系统环境中的交叉编译器安装方法，以及其他环节都可参考[2.1.2 Ubuntu环境](#subsec_ubuntu)的命令进行。 
+PKE实验将提供基于华为openEuler操作系统的开发方法，*具体的华为云使用方法待续*，但在openEuler操作系统环境中的交叉编译器安装方法，以及其他环节都可参考[2.1.3 Ubuntu环境](#subsec_ubuntu)的命令进行。 
 
 
 
