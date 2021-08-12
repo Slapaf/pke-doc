@@ -24,12 +24,17 @@
  - [3.2 lab1_1 系统调用](chapter3_traps.md#syscall)  
  - [3.3 lab1_2 异常处理](chapter3_traps.md#exception)  
  - [3.4 lab1_3（外部）中断](chapter3_traps.md#irq)  
+ - [3.5 lab1_challenge1 打印用户程序调用栈（难度：&#9733;&#9733;&#9734;&#9734;&#9734;）](chapter3_traps.md#lab1_challenge1_backtrace) 
+ - [3.6 lab1_challenge2 打印异常代码行（难度：&#9733;&#9733;&#9733;&#9733;&#9734;）](chapter3_traps.md#lab1_challenge2_errorline)
 
 [第四章. 实验2：内存管理](chapter4_memory.md)  
+
  - [4.1 实验2的基础知识](chapter4_memory.md#fundamental)  
  - [4.2 lab2_1 虚实地址转换](chapter4_memory.md#lab2_1_pagetable)  
  - [4.3 lab2_2 简单内存分配和回收](chapter4_memory.md#lab2_2_allocatepage)  
  - [4.4 lab2_3 缺页异常](chapter4_memory.md#lab2_3_pagefault)  
+ - [4.5 lab2_challenge1 复杂缺页异常（难度：&#9733;&#9734;&#9734;&#9734;&#9734;）](chapter4_memory.md#lab2_challenge1_pagefault)
+ - [4.6 lab2_challenge2 堆空间管理（难度：&#9733;&#9733;&#9733;&#9733;&#9734;）](chapter4_memory.md#lab2_challenge2_singlepageheap)
 
 [第五章. 实验3：进程管理](chapter5_process.md)  
 
@@ -37,8 +42,8 @@
  - [5.2 lab3_1 进程创建](chapter5_process.md#lab3_1_naive_fork)  
  - [5.3 lab3_2 进程yield](chapter5_process.md#lab3_2_yield)  
  - [5.4 lab3_3 循环轮转调度](chapter5_process.md#ilab3_3_rrsched)  
-
-
+ - [5.5 lab3_challenge1 进程等待和数据段复制（难度：&#9733;&#9733;&#9734;&#9734;&#9734;）](chapter5_process.md#lab3_challenge1_wait) 
+ - [5.6 lab3_challenge2 实现信号量（难度：&#9733;&#9733;&#9733;&#9734;&#9734;）](chapter5_process.md#lab3_challenge2_semaphore) 
 
 第六章. 实验4：设备管理
 
