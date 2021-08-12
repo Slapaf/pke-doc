@@ -21,6 +21,16 @@
   - [实验内容](#lab2_3_content)
   - [实验指导](#lab2_3_guide)
 
+- [4.5 lab2_challenge1 挑战一:pagefaults](#lab2_challenge1_pagefault)
+  - [给定应用](#lab2_challenge1_app)
+  - [实验内容](#lab2_challenge1_content)
+  - [实验指导](#lab2_challenge1_guide)
+
+- [4.6 lab2_challenge2 挑战二:singlepageheap](#lab2_challenge2_singlepageheap)
+  - [给定应用](#lab2_challenge2_app)
+  - [实验内容](#lab2_challenge2_content)
+  - [实验指导](#lab2_challenge2_guide)
+
 <a name="fundamental"></a>
 
 ## 4.1 实验2的基础知识
@@ -80,7 +90,7 @@ Sv39将39位虚拟地址“划分”为4个段（如下图所示）：
 
 PKE实验用到的RISC-V机器，实际上是spike模拟出来的，例如，采用以下命令：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_helloworld
 ```
 
@@ -98,7 +108,7 @@ spike将创建一个模拟的RISC-V机器，该机器拥有一个支持RV64G指�
 
 如图4.3b所示，在spike将操作系统内核装入物理内存后，剩余的内存空间应该是从内核数据段的结束（_end符号）到0xffffffff（即4GB-1的地址）。但是由于PKE操作系统内核的特殊性（它只需要支持给定应用的运行），lab2的代码将操作系统管理的空间进一步缩减，定义了一个操作系统需要管理的最大内存空间（kernel/config.h文件），从而提升实验代码的执行速度：
 
-```
+```c
  10 // the maximum memory space that PKE is allowed to manage
  11 #define PKE_MAX_ALLOWABLE_RAM 128 * 1024 * 1024
  12
@@ -108,35 +118,38 @@ spike将创建一个模拟的RISC-V机器，该机器拥有一个支持RV64G指�
 
 可以看到，实验代码“人为”地将PKE操作系统所能管理的内存空间限制到了128MB（即PKE_MAX_ALLOWABLE_RAM的定义），同时，定义了PHYS_TOP为新的内存物理地址上限。实际上，kernel/pmm.c文件所定义的pmm_init()函数包含了PKE对物理内存进行管理的逻辑：
 
-```
- 60 void pmm_init() {
- 61   // start of kernel program segment
- 62   uint64 g_kernel_start = KERN_BASE;
- 63   uint64 g_kernel_end = (uint64)&_end;
- 64
- 65   uint64 pke_kernel_size = g_kernel_end - g_kernel_start;
- 66   sprint("PKE kernel start 0x%lx, PKE kernel end: 0x%lx, PKE kernel size: 0x%lx .\n", g_kernel_start, g_kernel_end, pke_kernel_size);
- 67
- 68   // free memory starts from the end of PKE kernel and must be page-aligined
- 69   free_mem_start_addr = ROUNDUP(g_kernel_end , PGSIZE);
+```c
+ 62 void pmm_init() {
+ 63   // start of kernel program segment
+ 64   uint64 g_kernel_start = KERN_BASE;
+ 65   uint64 g_kernel_end = (uint64)&_end;
+ 66
+ 67   uint64 pke_kernel_size = g_kernel_end - g_kernel_start;
+ 68   sprint("PKE kernel start 0x%lx, PKE kernel end: 0x%lx, PKE kernel size: 0x%lx .\n",
+ 69     g_kernel_start, g_kernel_end, pke_kernel_size);
  70
- 71   // recompute g_mem_size to limit the physical memory space that PKE kernel needs to manage
- 72   g_mem_size = MIN(PKE_MAX_ALLOWABLE_RAM, g_mem_size);
- 73   if( g_mem_size < pke_kernel_size )
- 74     panic( "Error when recomputing physical memory size (g_mem_size).\n" );
- 75
- 76   free_mem_end_addr = g_mem_size + DRAM_BASE;
- 77   sprint("free physical memory address: [0x%lx, 0x%lx] \n", free_mem_start_addr, free_mem_end_addr - 1);
- 78
- 79   sprint("kernel memory manager is initializing ...\n");
- 80   // create the list of free pages
- 81   create_freepage_list(free_mem_start_addr, free_mem_end_addr);
- 82 }
+ 71   // free memory starts from the end of PKE kernel and must be page-aligined
+ 72   free_mem_start_addr = ROUNDUP(g_kernel_end , PGSIZE);
+ 73
+ 74   // recompute g_mem_size to limit the physical memory space that PKE kernel
+ 75   // needs to manage
+ 76   g_mem_size = MIN(PKE_MAX_ALLOWABLE_RAM, g_mem_size);
+ 77   if( g_mem_size < pke_kernel_size )
+ 78     panic( "Error when recomputing physical memory size (g_mem_size).\n" );
+ 79
+ 80   free_mem_end_addr = g_mem_size + DRAM_BASE;
+ 81   sprint("free physical memory address: [0x%lx, 0x%lx] \n", free_mem_start_addr,
+ 82     free_mem_end_addr - 1);
+ 83
+ 84   sprint("kernel memory manager is initializing ...\n");
+ 85   // create the list of free pages
+ 86   create_freepage_list(free_mem_start_addr, free_mem_end_addr);
+ 87 }
 ```
 
-在72行，pmm_init()函数会计算g_mem_size，其值在PKE_MAX_ALLOWABLE_RAM和spike所模拟的物理内存大小中取最小值，也就是说除非spike命令行参数中-m参数后面所带的数字小于128（即128M），g_mem_size的大小将为128MB。
+在76行，pmm_init()函数会计算g_mem_size，其值在PKE_MAX_ALLOWABLE_RAM和spike所模拟的物理内存大小中取最小值，也就是说除非spike命令行参数中-m参数后面所带的数字小于128（即128M），g_mem_size的大小将为128MB。
 
-另外，为了对空闲物理内存（地址范围为[_end，g_mem_size+DRAM_BASE(即PHYS_TOP)]）进行有效管理，pmm_init()函数在81行通过调用create_freepage_list()函数定义了一个链表，用于对空闲物理内存的分配和回收。kernel/pmm.c文件中包含了所有对物理内存的初始化、分配和回收的例程，它们的实现非常的简单，感兴趣的读者请对里面的函数进行阅读理解。
+另外，为了对空闲物理内存（地址范围为[_end，g_mem_size+DRAM_BASE(即PHYS_TOP)]）进行有效管理，pmm_init()函数在86行通过调用create_freepage_list()函数定义了一个链表，用于对空闲物理内存的分配和回收。kernel/pmm.c文件中包含了所有对物理内存的初始化、分配和回收的例程，它们的实现非常的简单，感兴趣的读者请对里面的函数进行阅读理解。
 
 <a name="virtualaddressspace"></a>
 
@@ -154,34 +167,34 @@ spike将创建一个模拟的RISC-V机器，该机器拥有一个支持RV64G指�
 
 操作系统内核建立页表的过程可以参考kernel/vmm.c文件中的kern_vm_init()函数的实现，需要说明的是kern_vm_init()函数在PKE操作系统内核的S态初始化过程（s_start函数）中被调用：
 
-```
-114 void kern_vm_init(void) {
-115   pagetable_t t_page_dir;
-116
-117   // allocate a page (t_page_dir) to be the page directory for kernel
-118   t_page_dir = (pagetable_t)alloc_page();
-119   memset(t_page_dir, 0, PGSIZE);
-120
-121   // map virtual address [KERN_BASE, _etext] to physical address [DRAM_BASE, DRAM_BASE+(_etext - KERN_BASE)],
-122   // to maintain (direct) text section kernel address mapping.
-123   kern_vm_map(t_page_dir, KERN_BASE, DRAM_BASE, (uint64)_etext - KERN_BASE,
-124          prot_to_type(PROT_READ | PROT_EXEC, 0));
+```c
+119 void kern_vm_init(void) {
+120   pagetable_t t_page_dir;
+121
+122   // allocate a page (t_page_dir) to be the page directory for kernel
+123   t_page_dir = (pagetable_t)alloc_page();
+124   memset(t_page_dir, 0, PGSIZE);
 125
-126   sprint("KERN_BASE 0x%lx\n", lookup_pa(t_page_dir, KERN_BASE));
-127
-128   // also (direct) map remaining address space, to make them accessable from kernel.
-129   // this is important when kernel needs to access the memory content of user's app without copying pages
-130   // between kernel and user spaces.
-131   kern_vm_map(t_page_dir, (uint64)_etext, (uint64)_etext, PHYS_TOP - (uint64)_etext,
-132          prot_to_type(PROT_READ | PROT_WRITE, 0));
-133
-134   sprint("physical address of _etext is: 0x%lx\n", lookup_pa(t_page_dir, (uint64)_etext));
-135
-136   g_kernel_pagetable = t_page_dir;
-137 }
+126   // map virtual address [KERN_BASE, _etext] to physical address [DRAM_BASE, DRAM_BASE+(_etext - KERN_BASE)],
+127   // to maintain (direct) text section kernel address mapping.
+128   kern_vm_map(t_page_dir, KERN_BASE, DRAM_BASE, (uint64)_etext - KERN_BASE,
+129          prot_to_type(PROT_READ | PROT_EXEC, 0));
+130
+131   sprint("KERN_BASE 0x%lx\n", lookup_pa(t_page_dir, KERN_BASE));
+132
+133   // also (direct) map remaining address space, to make them accessable from kernel.
+134   // this is important when kernel needs to access the memory content of user's app
+135   // without copying pages between kernel and user spaces.
+136   kern_vm_map(t_page_dir, (uint64)_etext, (uint64)_etext, PHYS_TOP - (uint64)_etext,
+137          prot_to_type(PROT_READ | PROT_WRITE, 0));
+138
+139   sprint("physical address of _etext is: 0x%lx\n", lookup_pa(t_page_dir, (uint64)_etext));
+140
+141   g_kernel_pagetable = t_page_dir;
+142 }
 ```
 
-我们看到，kern_vm_init()函数会首先（118行）从空闲物理内存中获取（分配）一个t_page_dir指针所指向的物理页，该页将作为内核页表的根目录（page directory，对应图4.1中的VPN[2]）。接下来，将该页的内容清零（119行）、映射代码段到它对应的物理地址（123--124行）、映射数据段的起始到PHYS_TOP到它对应的物理地址空间（131--132行），最后记录内核页表的根目录页（136行）。
+我们看到，kern_vm_init()函数会首先（123行）从空闲物理内存中获取（分配）一个t_page_dir指针所指向的物理页，该页将作为内核页表的根目录（page directory，对应图4.1中的VPN[2]）。接下来，将该页的内容清零（124行）、映射代码段到它对应的物理地址（128--129行）、映射数据段的起始到PHYS_TOP到它对应的物理地址空间（136--137行），最后记录内核页表的根目录页（141行）。
 
 ####  应用进程
 
@@ -189,7 +202,7 @@ spike将创建一个模拟的RISC-V机器，该机器拥有一个支持RV64G指�
 
 这里，我们可以观察一下在未指定逻辑地址的情况下的应用对应的逻辑地址。首先切换到lab2_1_pagetable，然后构造内核和应用：
 
-```
+```bash
 // 切换到lab2_1_pagetable分支
 $ git checkout lab2_1_pagetable
 // 构造内核和应用
@@ -218,7 +231,7 @@ Program Headers:
 
 PKE实验二中的应用加载是通过kernel/kernel.c文件中的load_user_program函数来完成的：
 
-```
+```c
  37 void load_user_program(process *proc) {
  38   sprint("User application is loading.\n");
  39   proc->trapframe = (trapframe *)alloc_page();  //trapframe
@@ -306,7 +319,7 @@ load_user_program()函数对于应用进程逻辑空间的操作可以分成以�
 
 - user/app_helloworld_no_lds.c
 
-```
+```c
   1 /*
   2  * Below is the given application for lab2_1.
   3  * This app runs in its own address space, in contrast with in direct mapping.
@@ -323,9 +336,9 @@ load_user_program()函数对于应用进程逻辑空间的操作可以分成以�
 
 该应用的代码跟lab1_1是一样的。但是，不同的地方在于，它的编译和链接并未指定程序中符号的逻辑地址。
 
-- 切换到lab2_1，继承lab1_3中所做的修改，并make后的直接运行结果：
+- （先提交lab1_3的答案，然后）切换到lab2_1，继承lab1_3中所做的修改，并make后的直接运行结果：
 
-```
+```bash
 //切换到lab2_1
 $ git checkout lab2_1_pagetable
 
@@ -367,7 +380,7 @@ System is shutting down with exit code -1.
 
 实现user_va_to_pa()函数，完成给定逻辑地址到物理地址的转换，并获得以下预期结果：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_helloworld_no_lds
 In m_start, hartid:0
 HTIF is available!
@@ -395,7 +408,7 @@ System is shutting down with exit code 0.
 
 读者可以参考[lab1_1](chapter3_traps.md#syscall)的内容，重走从应用的printu到S态的系统调用的完整路径，最终来到kernel/syscall.c文件的sys_user_print()函数：
 
-```
+```c
  21 ssize_t sys_user_print(const char* buf, size_t n) {
  22   //buf is an address in user space on user stack,
  23   //so we have to transfer it into phisical address (kernel is running in direct mapping).
@@ -408,22 +421,33 @@ System is shutting down with exit code 0.
 
 该函数最终在第26行通过调用sprint将结果输出，但是在输出前，需要将buf地址转换为物理地址传递给sprint，这一转换是通过user_va_to_pa()函数完成的。而user_va_to_pa()函数的定义在kernel/vmm.c文件中定义：
 
-```
-144 void *user_va_to_pa(pagetable_t page_dir, void *va) {
-145   //TODO: implement user_va_to_pa to convert a given user virtual address "va" to its corresponding
-146   // physical address, i.e., "pa". To do it, we need to walk through the page table, starting from its
-147   // directory "page_dir", to locate the PTE that maps "va". If found, returns the "pa" by using:
-148   // pa = PYHS_ADDR(PTE) + (va - va & (1<<PGSHIFT -1))
-149   // Here, PYHS_ADDR() means retrieving the starting address (4KB aligned), and (va - va & (1<<PGSHIFT -1))
-150   // means computing the offset of "va" in its page.
-151   // Also, it is possible that "va" is not mapped at all. in such case, we can find invalid PTE, and
-152   // should return NULL.
-153   panic( "You have to implement user_va_to_pa (convert user va to pa) to print messages in lab2_1.\n" );
-154
-155 }
+```c
+150 void *user_va_to_pa(pagetable_t page_dir, void *va) {
+151   // TODO (lab2_1): implement user_va_to_pa to convert a given user virtual address "va"
+152   // to its corresponding physical address, i.e., "pa". To do it, we need to walk
+153   // through the page table, starting from its directory "page_dir", to locate the PTE
+154   // that maps "va". If found, returns the "pa" by using:
+155   // pa = PYHS_ADDR(PTE) + (va - va & (1<<PGSHIFT -1))
+156   // Here, PYHS_ADDR() means retrieving the starting address (4KB aligned), and
+157   // (va - va & (1<<PGSHIFT -1)) means computing the offset of "va" in its page.
+158   // Also, it is possible that "va" is not mapped at all. in such case, we can find
+159   // invalid PTE, and should return NULL.
+160   panic( "You have to implement user_va_to_pa (convert user va to pa) to print messages in lab2_1.\n" );
+161
+162 }
 ```
 
 如注释中的提示，为了在page_dir所指向的页表中查找逻辑地址va，就必须通过调用[页表操作相关函数](#pagetablecook)找到包含va的页表项（PTE），通过该PTE的内容得知va所在的物理页面的首地址，最后再通过计算va在页内的位移得到va最终对应的物理地址。
+
+
+
+**实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab2_1中所做的工作**：
+
+```bash
+$ git commit -a -m "my work on lab2_1 is done."
+```
+
+
 
 <a name="lab2_2_allocatepage"></a>
 
@@ -435,7 +459,7 @@ System is shutting down with exit code 0.
 
 - user/app_naive_malloc.c
 
-```
+```c
   1 /*
   2  * Below is the given application for lab2_2.
   3  */
@@ -463,9 +487,9 @@ System is shutting down with exit code 0.
 
 该应用的逻辑非常简单：首先分配一个空间（内存页面）来存放my_structure结构，往my_structure结构的实例中存储信息，打印信息，并最终将之前所分配的空间释放掉。这里，新定义了两个用户态函数naive_malloc()和naive_free()，它们最终会转换成系统调用，完成内存的分配和回收操作。
 
-- 切换到lab2_2，继承lab2_1以及之前实验所做的修改，并make后的直接运行结果：
+- （先提交lab2_1的答案，然后）切换到lab2_2，继承lab2_1以及之前实验所做的修改，并make后的直接运行结果：
 
-```
+```bash
 //切换到lab2_2
 $ git checkout lab2_2_allocatepage
 
@@ -506,7 +530,7 @@ System is shutting down with exit code -1.
 
 如输出提示所表明的那样，需要完成naive_free对应的功能，并获得以下预期的结果输出：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_naive_malloc
 In m_start, hartid:0
 HTIF is available!
@@ -534,7 +558,7 @@ System is shutting down with exit code 0.
 
 一般来说，应用程序执行过程中的动态内存分配和回收，是操作系统中的堆（Heap）管理的内容。在本实验中，我们实际上是为PKE操作系统内核实现一个简单到不能再简单的“堆”。为实现naive_free()的内存回收过程，我们需要了解其对偶过程，即内存是如何“分配”给应用程序，并供后者使用的。为此，我们先阅读kernel/syscall.c文件中的naive_malloc()函数的底层实现，sys_user_allocate_page()：
 
-```
+```c
  43 uint64 sys_user_allocate_page() {
  44   void* pa = alloc_page();
  45   uint64 va = g_ufree_page;
@@ -546,16 +570,16 @@ System is shutting down with exit code 0.
  51 }
 ```
 
-这个函数在44行分配了一个首地址为pa的物理页面，这个物理页面要以何种方式映射给应用进程使用呢？第55行给出了pa对应的逻辑地址va = g_ufree_page，并在56行对g_ufree_page进行了递增操作。最后在47--48行，将pa映射给了va地址。这个过程中，g_ufree_page是如何定义的呢？我们可以找到它在kernel/process.c文件中的定义：
+这个函数在44行分配了一个首地址为pa的物理页面，这个物理页面要以何种方式映射给应用进程使用呢？第45行给出了pa对应的逻辑地址va = g_ufree_page，并在46行对g_ufree_page进行了递增操作。最后在47--48行，将pa映射给了va地址。这个过程中，g_ufree_page是如何定义的呢？我们可以找到它在kernel/process.c文件中的定义：
 
-```
+```c
  27 // start virtual address of our simple heap.
  28 uint64 g_ufree_page = USER_FREE_ADDRESS_START;
 ```
 
 而USER_FREE_ADDRESS_START的定义在kernel/memlayout.h文件：
 
-```
+```c
  17 // simple heap bottom, virtual address starts from 4MB
  18 #define USER_FREE_ADDRESS_START 0x00000000 + PGSIZE * 1024
 ```
@@ -570,6 +594,14 @@ System is shutting down with exit code 0.
 
 
 
+**实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab2_2中所做的工作**：
+
+```bash
+$ git commit -a -m "my work on lab2_2 is done."
+```
+
+
+
 <a name="lab2_3_pagefault"></a>
 
 ## 4.4 lab2_3 缺页异常
@@ -580,7 +612,7 @@ System is shutting down with exit code 0.
 
 - user/app_sum_sequence.c
 
-```
+```c
   1 /*
   2  * The application of lab2_3.
   3  */
@@ -613,9 +645,9 @@ System is shutting down with exit code 0.
 
 给定一个递增的等差数列：`0, 1, 2, ..., n`，如何求该数列的和？以上的应用给出了它的递归（recursive）解法。通过定义一个函数sum_sequence(n)，将求和问题转换为sum_sequence(n-1) + n的问题。问题中n依次递减，直至为0时令sum_sequence(0)=0。
 
-- 切换到lab2_3、继承lab2_2及以前所做修改，并make后的直接运行结果：
+- （先提交lab2_2的答案，然后）切换到lab2_3、继承lab2_2及以前所做修改，并make后的直接运行结果：
 
-```
+```bash
 //切换到lab2_3
 $ git checkout lab2_3_pagefault
 
@@ -664,7 +696,7 @@ System is shutting down with exit code -1.
 
 实验完成后的运行结果：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_sum_sequence
 In m_start, hartid:0
 HTIF is available!
@@ -697,7 +729,7 @@ System is shutting down with exit code 0.
 
 另外，lab1_2中处理的非法指令异常是在M模式下处理的，原因是我们根本没有将该异常代理给S模式。但是，对于本实验中的缺页异常是不是也是需要在M模式处理呢？我们先回顾以下kernel/machine/minit.c文件中的delegate_traps()函数：
 
-```
+```c
  51 static void delegate_traps() {
  52   if (!supports_extension('S')) {
  53     // confirm that our processor supports supervisor mode. abort if not.
@@ -719,22 +751,23 @@ System is shutting down with exit code 0.
 
 而在本实验的应用中，产生缺页异常的本质还是应用往未被映射的内存空间“写”（以及后续的访问）所导致的，所以CAUSE_STORE_PAGE_FAULT是我们应该关注的异常。通过阅读delegate_traps()函数，我们看到该函数显然已将缺页异常（CAUSE_STORE_PAGE_FAULT）代理给了S模式，所以，接下来我们就应阅读kernel/strap.c文件中对于这类异常的处理：
 
-```
- 42 void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
- 43   sprint("handle_page_fault: %lx\n", stval);
- 44   switch (mcause) {
- 45     case CAUSE_STORE_PAGE_FAULT:
- 46       // TODO: implement the operations that solve the page fault to dynamically increase application stack.
- 47       // hint: first allocate a new physical page, and then, maps the new page to the virtual address that
- 48       // causes the page fault.
- 49       panic( "You need to implement the operations that actually handle the page fault in lab2_3.\n" );
- 50
- 51       break;
- 52     default:
- 53       sprint("unknown page fault.\n");
- 54       break;
- 55   }
- 56 }
+```c
+ 49 void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
+ 50   sprint("handle_page_fault: %lx\n", stval);
+ 51   switch (mcause) {
+ 52     case CAUSE_STORE_PAGE_FAULT:
+ 53       // TODO (lab2_3): implement the operations that solve the page fault to
+ 54       // dynamically increase application stack.
+ 55       // hint: first allocate a new physical page, and then, maps the new page to the
+ 56       // virtual address that causes the page fault.
+ 57       panic( "You need to implement the operations that actually handle the page fault in lab2_3.\n" );
+ 58
+ 59       break;
+ 60     default:
+ 61       sprint("unknown page fault.\n");
+ 62       break;
+ 63   }
+ 64 }
 ```
 
 这里，我们找到了之前运行./obj/app_sum_sequence出错的地方，我们只需要改正这一错误实现缺页处理，使得程序获得正确的输出就好。实现缺页处理的思路如下：
@@ -742,3 +775,231 @@ System is shutting down with exit code 0.
 - 通过输入的参数stval（存放的是发生缺页异常时，程序想要访问的逻辑地址）判断缺页的逻辑地址在用户进程逻辑地址空间中的位置，看是不是比USER_STACK_TOP更大，且比我们预设的可能的用户栈最大空间小（这里，我们可以给用户栈一个上限，例如20个4KB的页面）；
 - 分配一个物理页，将所分配的物理页面映射到stval所对应的虚拟地址上。
 
+
+
+**实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab2_3中所做的工作**：
+
+```bash
+$ git commit -a -m "my work on lab2_3 is done."
+```
+
+
+
+<a name="lab2_challenge1_pagefault"></a>
+
+## 4.5 lab2_challenge1 挑战一：pagefaults
+
+<a name="lab2_challenge1_app"></a>
+
+#### 给定应用
+
+- user/app_sum_sequence.c
+
+  ```c
+   1	/*
+  2	 * The application of lab2_4.
+  3	 * Based on application of lab2_3.
+  4	 */
+  5	
+  6	#include "user_lib.h"
+  7	#include "util/types.h"
+  8	
+  9	//
+  10	// compute the summation of an arithmetic sequence. for a given "n", compute
+  11	// result = n + (n-1) + (n-2) + ... + 0
+  12	// sum_sequence() calls itself recursively till 0. The recursive call, however,
+  13	// may consume more memory (from stack) than a physical 4KB page, leading to a page fault.
+  14	// PKE kernel needs to improved to handle such page fault by expanding the stack.
+  15	//
+  16	uint64 sum_sequence(uint64 n, int *p) {
+  17	  if (n == 0)
+  18	    return 0;
+  19	  else
+  20	    return *p=sum_sequence( n-1, p+1 ) + n;
+  21	}
+  22	
+  23	int main(void) {
+  24	  // FIRST, we need a large enough "n" to trigger pagefaults in the user stack
+  25	  uint64 n = 1024;
+  26	
+  27	  // alloc a page size array(int) to store the result of every step
+  28	  // the max limit of the number is 4kB/4 = 1024
+  29	
+  30	  // SECOND, we use array out of bound to trigger pagefaults in an invalid address
+  31	  int *ans = (int *)naive_malloc();
+  32	
+  33	  printu("Summation of an arithmetic sequence from 0 to %ld is: %ld \n", n, sum_sequence(n+1, ans) );
+  34	
+  35	  exit(0);
+  36	}
+  
+  ```
+  
+  程序思路基本同lab2_3一致，对给定n计算0到n的和，但要求将每一步递归的结果保存在数组ans中。创建数组时，我们使用了当前的malloc函数申请了一个页面（4KB）的大小，对应可以存储的个数上限为1024。在函数调用时，我们试图计算1025求和，首先由于n足够大，所以在函数递归执行时会触发用户栈的缺页，你需要对其进行正确处理，确保程序正确运行；其次，1025在最后一次计算时会访问数组越界地址，由于该处虚拟地址尚未有对应的物理地址映射，因此属于非法地址的访问，这是不被允许的，对于这种缺页异常，应该提示用户并退出程序执行。如上的应用预期输出如下：
+  
+  ```bash
+  In m_start, hartid:0
+  HTIF is available!
+  (Emulated) memory size: 2048 MB
+  Enter supervisor mode...
+  PKE kernel start 0x0000000080000000, PKE kernel end: 0x000000008000e000, PKE kernel size: 0x000000000000e000 .
+  free physical memory address: [0x000000008000e000, 0x0000000087ffffff] 
+  kernel memory manager is initializing ...
+  KERN_BASE 0x0000000080000000
+  physical address of _etext is: 0x0000000080004000
+  kernel page table is on 
+  User application is loading.
+  user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000 
+  Application: ./obj/app_sum_sequence
+  Application program entry point (virtual address): 0x00000000000100da
+  Switching to user mode...
+  handle_page_fault: 000000007fffdff8
+  handle_page_fault: 000000007fffcff8
+  handle_page_fault: 000000007fffbff8
+  handle_page_fault: 000000007fffaff8
+  handle_page_fault: 000000007fff9ff8
+  handle_page_fault: 000000007fff8ff8
+  handle_page_fault: 000000007fff7ff8
+  handle_page_fault: 000000007fff6ff8
+  handle_page_fault: 0000000000401000
+  this address is not available!
+  System is shutting down with exit code -1.
+  ```
+
+根据结果可以看出：前八个缺页是由于函数递归调用引起的，而最后一个缺页是对动态申请的数组进行越界访问造成的，访问非法地址，程序报错并退出。
+
+#### 实验内容
+
+本实验为挑战实验，基础代码将继承和使用lab2_3完成后的代码：
+
+- （先提交lab2_3的答案，然后）切换到lab2_challenge1_pagefaults、继承lab2_3中所做修改：
+
+```bash
+//切换到lab2_challenge1_pagefault
+$ git checkout lab2_challenge1_pagefaults
+
+//继承lab2_3以及之前的答案
+$ git merge lab2_3_pagefault -m "continue to work on lab2_challenge1"
+```
+
+注意：**不同于基础实验，挑战实验的基础代码具有更大的不完整性，可能无法直接通过构造过程。**同样，不同于基础实验，我们在代码中也并未专门地哪些地方的代码需要填写，哪些地方的代码无须填写。这样，我们留给读者更大的“想象空间”。
+
+- 本实验的具体要求为：通过修改PKE内核（包括machine文件夹下的代码），使得对于不同情况的缺页异常进行不同的处理。
+- 文件名规范：需要包含路径，如果是用户源程序发生的错误，路径为相对路径，如果是调用的标准库内发生的错误，路径为绝对路径。
+
+<a name="lab2_challenge1_guide"></a>
+
+#### 实验指导
+
+- 你对内核代码的修改可能包含以下内容：
+  - 修改进程的数据结构以对虚拟地址空间进行监控。
+  - 修改kernel/strap.c中的异常处理函数。对于合理的缺页异常，扩大内核栈大小并为其映射物理块；对于非法地址缺页，报错并退出程序。
+
+**注意：完成挑战任务对两种缺页进行实现后，读者可对任意n验证，由于目前的malloc函数是申请一个页面大小，所以对于n<=1024，只会产生第一种缺页并打印正确的计算结果；对于n>=1025，则会因为访问非法地址退出，请读者验证自己的实现。**
+
+**另外，后续的基础实验代码并不依赖挑战实验，所以读者可自行决定是否将自己的工作提交到本地代码仓库中（当然，提交到本地仓库是个好习惯，至少能保存自己的“作品”）。**
+
+<a name="lab2_challenge2_singlepageheap"></a>
+
+## 4.6 lab2_challenge2 挑战2：singlepageheap
+
+<a name="lab2_challenge2_app"></a>
+
+#### 给定应用
+
+- user/app_singlepageheap.c
+
+```c
+ 1	/*
+2	 * Below is the given application for lab2_challenge2_singlepageheap.
+3	 * This app performs malloc memory.
+4	 */
+5	
+6	#include "user_lib.h"
+7	#include "util/types.h"
+8	#include "util/string.h"
+9	int main(void) {
+10	  
+11	  char str[20] = "hello world.";
+12	  char *m = (char *)better_malloc(100);
+13	  char *p = (char *)better_malloc(50);
+14	  if((uint64)p - (uint64)m > 512 ){
+15	    printu("you need to manage the vm space precisely!");
+16	    exit(-1);
+17	  }
+18	  better_free((void *)m);
+19	
+20	  strcpy(p,str);
+21	  printu("%s\n",p);
+22	  exit(0);
+23	  return 0;
+24	}
+```
+
+以上程序先利用better_malloc分别申请100和50个字节的一个物理页的内存，然后使用better_free释放掉100个字节，向50个字节中复制一串字符串，进行输出。原本的pke中malloc的实现是非常简化的（一次直接分配一个页面），你的挑战任务是**修改内核(包括machine文件夹下)的代码，使得应用程序的malloc能够在一个物理页中分配，并对各申请块进行合理的管理**，如上面的应用预期输出如下：
+
+```bash
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080008000, PKE kernel size: 0x0000000000008000 .
+free physical memory address: [0x0000000080008000, 0x0000000087ffffff]
+kernel memory manager is initializing ...
+KERN_BASE 0x0000000080000000
+physical address of _etext is: 0x0000000080005000
+kernel page table is on
+User application is loading.
+user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000
+Application: obj/app_singlepageheap
+Application program entry point (virtual address): 0x00000000000100b0
+Switch to user mode...
+hello world.
+User exit with code:0.
+System is shutting down with exit code 0.
+```
+
+通过应用程序和对应的预期结果可以看出：两次申请的空间在同一页面，并且释放第一块时，不会释放整个页面，所以需要你设计合适的数据结构对各块进行管理，使得better_malloc申请的空间更加“紧凑”。
+
+<a name="lab2_challenge2_content"></a>
+
+####  实验内容
+
+本实验为挑战实验，基础代码将继承和使用lab2_challenge1完成后的代码：
+
+- （先提交lab2_3的答案，然后）切换到lab2_challenge2、继承lab2_3中所做修改：
+
+```bash
+//切换到lab2_challenge2_singlepageheap
+$ git checkout lab2_challenge2_singlepageheap
+
+//继承lab2_challenge1以及之前的答案
+$ git merge lab2_3_pagefault -m "continue to work on lab2_challenge2"
+```
+
+注意：**不同于基础实验，挑战实验的基础代码具有更大的不完整性，可能无法直接通过构造过程。**同样，不同于基础实验，我们在代码中也并未专门地哪些地方的代码需要填写，哪些地方的代码无须填写。这样，我们留给读者更大的“想象空间”。
+
+- 本实验的具体要求为：通过修改PKE内核（包括machine文件下的代码），实现优化后的malloc函数，使得应用程序两次申请块在同一页面，并且能够正常输出存入第二块中的字符串"hello world"。
+- 文件名规范：需要包含路径，如果是用户源程序发生的错误，路径为相对路径，如果是调用的标准库内发生的错误，路径为绝对路径。
+
+<a name="lab2_challenge2_guide"></a>
+
+#### 实验指导
+
+- 为完成该挑战，你需要对进程的虚拟地址空间进行管理，建议参考Linux的内存分配策略从而实现malloc。
+
+- 你对内核代码的修改可能包含以下内容：
+
+  - 增加内存控制块数据结构对分配的内存块进行管理。
+
+  - 修改process的数据结构以扩展对虚拟地址空间的管理，后续对于heap的扩展，需要对新增的虚拟地址添加对应的物理地址映射。
+
+  - 设计函数对进程的虚拟地址空间进行管理，借助以上内容具体实现heap扩展。
+
+  - 设计malloc函数和free函数对内存块进行管理。
+  
+    
+
+**注意：本挑战的创新思路及难点就在于分配和回收策略的设计（对应malloc和free），读者应同时思考两个函数如何实现，基于紧凑性和高效率的设计目标，设计自己认为高效的分配策略。完成设计后，请读者另外编写应用，设计不同场景使用better_malloc和better_free函数，验证挑战目标以及对自己实现进行检测。**
+
+**另外，后续的基础实验代码并不依赖挑战实验，所以读者可自行决定是否将自己的工作提交到本地代码仓库中（当然，提交到本地仓库是个好习惯，至少能保存自己的“作品”）。**
