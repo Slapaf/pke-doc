@@ -592,6 +592,8 @@ System is shutting down with exit code 0.
 - 如果找到（过滤找不到的情形），通过该PTE的内容得知va所对应物理页的首地址pa；
 - 回收pa对应的物理页，并将PTE中的Valid位置为0。
 
+**本实验若出现M模式的非法异常`unexpected exception happened in M-mode.`，说明`naive_malloc`对应的系统调用未返回正确的逻辑地址。解决问题的方法是，回头检查你在lab1_1中所做的答案！**：
+
 
 
 **实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab2_2中所做的工作**：
