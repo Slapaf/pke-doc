@@ -18,6 +18,14 @@
   - [给定应用](#lab3_3_app)
   - [实验内容](#lab3_3_content)
   - [实验指导](#lab3_3_guide)
+- [5.5 lab3_challenge1 进程等待和数据段复制](#lab3_challenge1_wait) 
+  - [给定应用](#lab3_challenge1_app)
+  - [实验内容](#lab3_challenge1_content)
+  - [实验指导](#lab3_challenge1_guide)
+- [5.6 lab3_challenge2 实现信号量](#lab3_challenge2_semaphore) 
+  - [给定应用](#lab3_challenge2_app)
+  - [实验内容](#lab3_challenge2_content)
+  - [实验指导](#lab3_challenge2_guide)
 
 <a name="fundamental"></a>
 
@@ -32,7 +40,8 @@
 实验3跟之前的两个实验最大的不同，在于在实验3的3个基本实验中，PKE操作系统将需要支持多个进程的执行。为了对多任务环境进行支撑，PKE操作系统定义了一个“进程池”（见kernel/process.c文件）：
 
 ```C
- 34 process procs[NPROC];
+ 34 // process pool
+ 35 process procs[NPROC];
 ```
 
 实际上，这个进程池就是一个包含NPROC（=32，见kernel/process.h文件）个process结构的数组。
@@ -40,34 +49,31 @@
 接下来，PKE操作系统对进程的结构进行了扩充（见kernel/process.h文件）：
 
 ```C
- 53   // points to a page that contains mapped_regions
- 54   mapped_region *mapped_info;
- 55   // next free mapped region in mapped_info
- 56   int total_mapped_region;
- 57
- 58   // process id
- 59   uint64 pid;
- 60   // process status
- 61   int status;
- 62   // parent process
- 63   struct process *parent;
- 64   // next queue element
- 65   struct process *queue_next;
- 66
- 67   // accounting
- 68   int tick_count;
+ 58   // points to a page that contains mapped_regions
+ 59   mapped_region *mapped_info;
+ 60   // next free mapped region in mapped_info
+ 61   int total_mapped_region;
+ 62
+ 63   // process id
+ 64   uint64 pid;
+ 65   // process status
+ 66   int status;
+ 67   // parent process
+ 68   struct process *parent;
+ 69   // next queue element
+ 70   struct process *queue_next;
 ```
 
 - 前两项mapped_info和total_mapped_region用于对进程的虚拟地址空间（中的代码段、堆栈段等）进行跟踪，这些虚拟地址空间在进程创建（fork）时，将发挥重要作用。同时，这也是lab3_1的内容。PKE将进程可能拥有的段分为以下几个类型：
 
 ```C
- 29 enum segment_type {
- 30   CODE_SEGMENT,    // ELF segment
- 31   DATA_SEGMENT,    // ELF segment
- 32   STACK_SEGMENT,   // runtime segment
- 33   CONTEXT_SEGMENT, // trapframe segment
- 34   SYSTEM_SEGMENT,  // system segment
- 35 };
+ 34 enum segment_type {
+ 35   CODE_SEGMENT,    // ELF segment
+ 36   DATA_SEGMENT,    // ELF segment
+ 37   STACK_SEGMENT,   // runtime segment
+ 38   CONTEXT_SEGMENT, // trapframe segment
+ 39   SYSTEM_SEGMENT,  // system segment
+ 40 };
 ```
 
 其中CODE_SEGMENT表示该段是从可执行ELF文件中加载的代码段，DATA_SEGMENT为从ELF文件中加载的数据段，STACK_SEGMENT为进程自身的栈段，CONTEXT_SEGMENT为保存进程上下文的trapframe所对应的段，SYSTEM_SEGMENT为进程的系统段，如所映射的异常处理段。
@@ -76,13 +82,13 @@
 - status记录了进程的状态，PKE操作系统在实验3给进程规定了以下几种状态：
 
 ```C
- 20 enum proc_status {
- 21   FREE,            // unused state
- 22   READY,           // ready state
- 23   RUNNING,         // currently running
- 24   BLOCKED,         // waiting for something
- 25   ZOMBIE,          // terminated but not reclaimed yet
- 26 };
+ 25 enum proc_status {
+ 26   FREE,            // unused state
+ 27   READY,           // ready state
+ 28   RUNNING,         // currently running
+ 29   BLOCKED,         // waiting for something
+ 30   ZOMBIE,          // terminated but not reclaimed yet
+ 31 };
 ```
 
 其中，FREE为自由态，表示进程结构可用；READY为就绪态，即进程所需的资源都已准备好，可以被调度执行；RUNNING表示该进程处于正在运行的状态；BLOCKED表示进程处于阻塞状态；ZOMBIE表示进程处于“僵尸”状态，进程的资源可以被释放和回收。
@@ -98,63 +104,63 @@
 PKE实验中，创建一个进程需要先调用kernel/process.c文件中的alloc_process()函数：
 
 ```C
- 88 process* alloc_process() {
- 89   // locate the first usable process structure
- 90   int i;
- 91
- 92   for( i=0; i<NPROC; i++ )
- 93     if( procs[i].status == FREE ) break;
- 94
- 95   if( i>=NPROC ){
- 96     panic( "cannot find any free process structure.\n" );
- 97     return 0;
- 98   }
- 99
-100   // init proc[i]'s vm space
-101   procs[i].trapframe = (trapframe *)alloc_page();  //trapframe, used to save context
-102   memset(procs[i].trapframe, 0, sizeof(trapframe));
-103
-104   // page directory
-105   procs[i].pagetable = (pagetable_t)alloc_page();
-106   memset((void *)procs[i].pagetable, 0, PGSIZE);
-107
-108   procs[i].kstack = (uint64)alloc_page() + PGSIZE;   //user kernel stack top
-109   uint64 user_stack = (uint64)alloc_page();       //phisical address of user stack bottom
-110   procs[i].trapframe->regs.sp = USER_STACK_TOP;  //virtual address of user stack top
-111
-112   // allocates a page to record memory regions (segments)
-113   procs[i].mapped_info = (mapped_region*)alloc_page();
-114   memset( procs[i].mapped_info, 0, PGSIZE );
-115
-116   // map user stack in userspace
-117   user_vm_map((pagetable_t)procs[i].pagetable, USER_STACK_TOP - PGSIZE, PGSIZE,
-118     user_stack, prot_to_type(PROT_WRITE | PROT_READ, 1));
-119   procs[i].mapped_info[0].va = USER_STACK_TOP - PGSIZE;
-120   procs[i].mapped_info[0].npages = 1;
-121   procs[i].mapped_info[0].seg_type = STACK_SEGMENT;
-122
-123   // map trapframe in user space (direct mapping as in kernel space).
-124   user_vm_map((pagetable_t)procs[i].pagetable, (uint64)procs[i].trapframe, PGSIZE,
-125     (uint64)procs[i].trapframe, prot_to_type(PROT_WRITE | PROT_READ, 0));
-126   procs[i].mapped_info[1].va = (uint64)procs[i].trapframe;
-127   procs[i].mapped_info[1].npages = 1;
-128   procs[i].mapped_info[1].seg_type = CONTEXT_SEGMENT;
-129
-130   // map S-mode trap vector section in user space (direct mapping as in kernel space)
-131   // we assume that the size of usertrap.S is smaller than a page.
-132   user_vm_map((pagetable_t)procs[i].pagetable, (uint64)trap_sec_start, PGSIZE,
-133     (uint64)trap_sec_start, prot_to_type(PROT_READ | PROT_EXEC, 0));
-134   procs[i].mapped_info[2].va = (uint64)trap_sec_start;
-135   procs[i].mapped_info[2].npages = 1;
-136   procs[i].mapped_info[2].seg_type = SYSTEM_SEGMENT;
-137
-138   sprint("in alloc_proc. user frame 0x%lx, user stack 0x%lx, user kstack 0x%lx \n",
-139     procs[i].trapframe, procs[i].trapframe->regs.sp, procs[i].kstack);
-140
-141   procs[i].total_mapped_region = 3;
-142   // return after initialization.
-143   return &procs[i];
-144 }
+ 89 process* alloc_process() {
+ 90   // locate the first usable process structure
+ 91   int i;
+ 92
+ 93   for( i=0; i<NPROC; i++ )
+ 94     if( procs[i].status == FREE ) break;
+ 95
+ 96   if( i>=NPROC ){
+ 97     panic( "cannot find any free process structure.\n" );
+ 98     return 0;
+ 99   }
+100
+101   // init proc[i]'s vm space
+102   procs[i].trapframe = (trapframe *)alloc_page();  //trapframe, used to save context
+103   memset(procs[i].trapframe, 0, sizeof(trapframe));
+104
+105   // page directory
+106   procs[i].pagetable = (pagetable_t)alloc_page();
+107   memset((void *)procs[i].pagetable, 0, PGSIZE);
+108
+109   procs[i].kstack = (uint64)alloc_page() + PGSIZE;   //user kernel stack top
+110   uint64 user_stack = (uint64)alloc_page();       //phisical address of user stack bottom
+111   procs[i].trapframe->regs.sp = USER_STACK_TOP;  //virtual address of user stack top
+112
+113   // allocates a page to record memory regions (segments)
+114   procs[i].mapped_info = (mapped_region*)alloc_page();
+115   memset( procs[i].mapped_info, 0, PGSIZE );
+116
+117   // map user stack in userspace
+118   user_vm_map((pagetable_t)procs[i].pagetable, USER_STACK_TOP - PGSIZE, PGSIZE,
+119     user_stack, prot_to_type(PROT_WRITE | PROT_READ, 1));
+120   procs[i].mapped_info[0].va = USER_STACK_TOP - PGSIZE;
+121   procs[i].mapped_info[0].npages = 1;
+122   procs[i].mapped_info[0].seg_type = STACK_SEGMENT;
+123
+124   // map trapframe in user space (direct mapping as in kernel space).
+125   user_vm_map((pagetable_t)procs[i].pagetable, (uint64)procs[i].trapframe, PGSIZE,
+126     (uint64)procs[i].trapframe, prot_to_type(PROT_WRITE | PROT_READ, 0));
+127   procs[i].mapped_info[1].va = (uint64)procs[i].trapframe;
+128   procs[i].mapped_info[1].npages = 1;
+129   procs[i].mapped_info[1].seg_type = CONTEXT_SEGMENT;
+130
+131   // map S-mode trap vector section in user space (direct mapping as in kernel space)
+132   // we assume that the size of usertrap.S is smaller than a page.
+133   user_vm_map((pagetable_t)procs[i].pagetable, (uint64)trap_sec_start, PGSIZE,
+134     (uint64)trap_sec_start, prot_to_type(PROT_READ | PROT_EXEC, 0));
+135   procs[i].mapped_info[2].va = (uint64)trap_sec_start;
+136   procs[i].mapped_info[2].npages = 1;
+137   procs[i].mapped_info[2].seg_type = SYSTEM_SEGMENT;
+138
+139   sprint("in alloc_proc. user frame 0x%lx, user stack 0x%lx, user kstack 0x%lx \n",
+140     procs[i].trapframe, procs[i].trapframe->regs.sp, procs[i].kstack);
+141
+142   procs[i].total_mapped_region = 3;
+143   // return after initialization.
+144   return &procs[i];
+145 }
 ```
 
 通过以上代码，可以发现alloc_process()函数除了找到一个空的进程结构外，还为新创建的进程建立了KERN_BASE以上逻辑地址的映射（这段代码在实验3之前位于kernel/kernel.c文件的load_user_program()函数中），并将映射信息保存到了进程结构中。
@@ -209,36 +215,36 @@ PKE实验中，创建一个进程需要先调用kernel/process.c文件中的allo
 接下来，将通过switch_to()函数将所构造的进程投入执行：
 
 ```c
- 42 void switch_to(process *proc) {
- 43   assert(proc);
- 44   current = proc;
- 45
- 46   write_csr(stvec, (uint64)smode_trap_vector);
- 47   // set up trapframe values that smode_trap_vector will need when
- 48   // the process next re-enters the kernel.
- 49   proc->trapframe->kernel_sp = proc->kstack;      // process's kernel stack
- 50   proc->trapframe->kernel_satp = read_csr(satp);  // kernel page table
- 51   proc->trapframe->kernel_trap = (uint64)smode_trap_handler;
- 52
- 53   // set up the registers that strap_vector.S's sret will use
- 54   // to get to user space.
- 55
- 56   // set S Previous Privilege mode to User.
- 57   unsigned long x = read_csr(sstatus);
- 58   x &= ~SSTATUS_SPP;  // clear SPP to 0 for user mode
- 59   x |= SSTATUS_SPIE;  // enable interrupts in user mode
- 60
- 61   write_csr(sstatus, x);
- 62
- 63   // set S Exception Program Counter to the saved user pc.
- 64   write_csr(sepc, proc->trapframe->epc);
- 65
- 66   //make user page table
- 67   uint64 user_satp = MAKE_SATP(proc->pagetable);
- 68
- 69   // switch to user mode with sret.
- 70   return_to_user(proc->trapframe, user_satp);
- 71 }
+ 43 void switch_to(process* proc) {
+ 44   assert(proc);
+ 45   current = proc;
+ 46
+ 47   write_csr(stvec, (uint64)smode_trap_vector);
+ 48   // set up trapframe values that smode_trap_vector will need when
+ 49   // the process next re-enters the kernel.
+ 50   proc->trapframe->kernel_sp = proc->kstack;      // process's kernel stack
+ 51   proc->trapframe->kernel_satp = read_csr(satp);  // kernel page table
+ 52   proc->trapframe->kernel_trap = (uint64)smode_trap_handler;
+ 53
+ 54   // set up the registers that strap_vector.S's sret will use
+ 55   // to get to user space.
+ 56
+ 57   // set S Previous Privilege mode to User.
+ 58   unsigned long x = read_csr(sstatus);
+ 59   x &= ~SSTATUS_SPP;  // clear SPP to 0 for user mode
+ 60   x |= SSTATUS_SPIE;  // enable interrupts in user mode
+ 61
+ 62   write_csr(sstatus, x);
+ 63
+ 64   // set S Exception Program Counter to the saved user pc.
+ 65   write_csr(sepc, proc->trapframe->epc);
+ 66
+ 67   //make user page table
+ 68   uint64 user_satp = MAKE_SATP(proc->pagetable);
+ 69
+ 70   // switch to user mode with sret.
+ 71   return_to_user(proc->trapframe, user_satp);
+ 72 }
 ```
 
 实际上，以上函数在[实验1](chapter3_traps.md)就有所涉及，它的作用是将进程结构中的trapframe作为进程上下文恢复到RISC-V机器的通用寄存器中，并最后调用sret指令（通过return_to_user()函数）将进程投入执行。
@@ -255,18 +261,18 @@ PKE实验中，创建一个进程需要先调用kernel/process.c文件中的allo
  40 }
 ```
 
-可以看到，如果某进程调用了exit()系统调用，操作系统的处理方法是调用free_process()函数，将当前进程（也就是调用者）进行“释放”，然后转进程调度。其中free_process()函数的实现非常简单：
+可以看到，如果某进程调用了exit()系统调用，操作系统的处理方法是调用free_process()函数，将当前进程（也就是调用者）进行“释放”，然后转进程调度。其中free_process()函数（kernel/process.c文件）的实现非常简单：
 
 ```c
-149 int free_process( process* proc ) {
-150   // we set the status to ZOMBIE, but cannot destruct its vm space immediately.
-151   // since proc can be current process, and its user kernel stack is currently in use!
-152   // but for proxy kernel, it (memory leaking) may NOT be a really serious issue,
-153   // as it is different from regular OS, which needs to run 7x24.
-154   proc->status = ZOMBIE;
-155
-156   return 0;
-157 }
+150 int free_process( process* proc ) {
+151   // we set the status to ZOMBIE, but cannot destruct its vm space immediately.
+152   // since proc can be current process, and its user kernel stack is currently in use!
+153   // but for proxy kernel, it (memory leaking) may NOT be a really serious issue,
+154   // as it is different from regular OS, which needs to run 7x24.
+155   proc->status = ZOMBIE;
+156
+157   return 0;
+158 }
 ```
 
 可以看到，**free_process()函数仅是将进程设为ZOMBIE状态，而不会将进程所占用的资源全部释放**！这是因为free_process()函数的调用，说明操作系统当前是在S模式下运行，而按照PKE的设计思想，S态的运行将使用当前进程的用户系统栈（user kernel stack）。此时，如果将当前进程的内存空间进行释放，将导致操作系统本身的崩溃。所以释放进程时，PKE采用的是折衷的办法，即只将其设置为僵尸（ZOMBIE）状态，而不是立即将它所占用的资源进行释放。最后，schedule()函数的调用，将选择系统中可能存在的其他处于就绪状态的进程投入运行，它的处理逻辑我们将在下一节讨论。
@@ -366,33 +372,30 @@ PKE操作系统内核通过调用schedule()函数来完成进程的选择和换�
 
 ```c
   1 /*
-  2  * Below is the given application for lab3_1.
-  3  * It forks a child process to run .
-  4  * Parent process will continue to run after child exits
-  5  * So it is a naive "fork". we will implement a better one in later lab.
-  6  *
-  7  */
+  2  * The application of lab3_1.
+  3  * it simply forks a child process.
+  4  */
+  5
+  6 #include "user/user_lib.h"
+  7 #include "util/types.h"
   8
-  9 #include "user/user_lib.h"
- 10 #include "util/types.h"
- 11
- 12 int main(void) {
- 13   uint64 pid = fork();
- 14   if (pid == 0) {
- 15     printu("Child: Hello world!\n");
- 16   } else {
- 17     printu("Parent: Hello world! child id %ld\n", pid);
- 18   }
- 19
- 20   exit(0);
- 21 }
+  9 int main(void) {
+ 10   uint64 pid = fork();
+ 11   if (pid == 0) {
+ 12     printu("Child: Hello world!\n");
+ 13   } else {
+ 14     printu("Parent: Hello world! child id %ld\n", pid);
+ 15   }
+ 16
+ 17   exit(0);
+ 18 }
 ```
 
 以上程序的行为非常简单：主进程调用fork()函数，后者产生一个系统调用，基于主进程这个模板创建它的子进程。
 
-- 切换到lab3_1，继承lab2_3及之前实验所做的修改，并make后的直接运行结果：
+- （先提交lab2_3的答案，然后）切换到lab3_1，继承lab2_3及之前实验所做的修改，并make后的直接运行结果：
 
-```
+```bash
 //切换到lab3_1
 $ git checkout lab3_1_fork
 
@@ -434,7 +437,7 @@ System is shutting down with exit code -1.
 
 这里，既然涉及到了父进程的代码段，我们就可以先用readelf命令查看一下给定应用程序的可执行代码对应的ELF文件结构：
 
-```
+```bash
 $ riscv64-unknown-elf-readelf -l ./obj/app_naive_fork
 
 Elf file type is EXEC (Executable file)
@@ -460,7 +463,7 @@ Program Headers:
 
 完善操作系统内核kernel/process.c文件中的do_fork()函数，并最终获得以下预期结果：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_naive_fork
 In m_start, hartid:0
 HTIF is available!
@@ -507,55 +510,66 @@ user/app_naive_fork.c --> user/user_lib.c --> kernel/strap_vector.S --> kernel/s
 直至跟踪到kernel/process.c文件中的do_fork()函数：
 
 ```c
-166 int do_fork( process* parent)
-167 {
-168   sprint( "will fork a child from parent %d.\n", parent->pid );
-169   process* child = alloc_process();
-170
-171   for( int i=0; i<parent->total_mapped_region; i++ ){
-172     // browse parent's vm space, and copy its trapframe and data segments,
-173     // map its code segment.
-174     switch( parent->mapped_info[i].seg_type ){
-175       case CONTEXT_SEGMENT:
-176         *child->trapframe = *parent->trapframe;
-177         break;
-178       case STACK_SEGMENT:
-179         memcpy( (void*)lookup_pa(child->pagetable, child->mapped_info[0].va),
-180           (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
-181         break;
-182       case CODE_SEGMENT:
-183         // TODO: implment the mapping of child code segment to parent's code segment.
-184         // hint: the virtual address mapping of code segment is tracked in mapped_info
-185         // page of parent's process structure. use the information in mapped_info to
-186         // retrieve the virtual to physical mapping of code segment.
-187         // after having the mapping information, just map the corresponding virtual
-188         // address region of child to the physical pages that actually store the code
-189         // segment of parent process.
-190         // DO NOT COPY THE PHYSICAL PAGES, JUST MAP THEM.
-191         panic( "You need to implement the code segment mapping of child in lab3_1.\n" );
-192
-193         // after mapping, register the vm region (do not delete codes below!)
-194         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
-195         child->mapped_info[child->total_mapped_region].npages =
-196           parent->mapped_info[i].npages;
-197         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
-198         child->total_mapped_region++;
-199         break;
-200     }
-201   }
-202
-203   child->status = READY;
-204   child->trapframe->regs.a0 = 0;
-205   child->parent = parent;
-206   insert_to_ready_queue( child );
-207
-208   return child->pid;
-209 }
+167 int do_fork( process* parent)
+168 {
+169   sprint( "will fork a child from parent %d.\n", parent->pid );
+170   process* child = alloc_process();
+171
+172   for( int i=0; i<parent->total_mapped_region; i++ ){
+173     // browse parent's vm space, and copy its trapframe and data segments,
+174     // map its code segment.
+175     switch( parent->mapped_info[i].seg_type ){
+176       case CONTEXT_SEGMENT:
+177         *child->trapframe = *parent->trapframe;
+178         break;
+179       case STACK_SEGMENT:
+180         memcpy( (void*)lookup_pa(child->pagetable, child->mapped_info[0].va),
+181           (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
+182         break;
+183       case CODE_SEGMENT:
+184         // TODO (lab3_1): implment the mapping of child code segment to parent's
+185         // code segment.
+186         // hint: the virtual address mapping of code segment is tracked in mapped_info
+187         // page of parent's process structure. use the information in mapped_info to
+188         // retrieve the virtual to physical mapping of code segment.
+189         // after having the mapping information, just map the corresponding virtual
+190         // address region of child to the physical pages that actually store the code
+191         // segment of parent process.
+192         // DO NOT COPY THE PHYSICAL PAGES, JUST MAP THEM.
+193         panic( "You need to implement the code segment mapping of child in lab3_1.\n" );
+194
+195         // after mapping, register the vm region (do not delete codes below!)
+196         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+197         child->mapped_info[child->total_mapped_region].npages =
+198           parent->mapped_info[i].npages;
+199         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
+200         child->total_mapped_region++;
+201         break;
+202     }
+203   }
+204
+205   child->status = READY;
+206   child->trapframe->regs.a0 = 0;
+207   child->parent = parent;
+208   insert_to_ready_queue( child );
+209
+210   return child->pid;
+211 }
 ```
 
-该函数使用第171--201行的循环来拷贝父进程的逻辑地址空间到其子进程。我们看到，对于trapframe段（case CONTEXT_SEGMENT）以及堆栈段（case CODE_SEGMENT），do_fork()函数采用了简单复制的办法来拷贝父进程的这两个段到子进程中，这样做的目的是将父进程的执行现场传递给子进程。
+该函数使用第172--202行的循环来拷贝父进程的逻辑地址空间到其子进程。我们看到，对于trapframe段（case CONTEXT_SEGMENT）以及堆栈段（case CODE_SEGMENT），do_fork()函数采用了简单复制的办法来拷贝父进程的这两个段到子进程中，这样做的目的是将父进程的执行现场传递给子进程。
 
-然而，对于父进程的代码段，子进程应该如何“继承”呢？通过第184--189行的注释，我们知道对于代码段，我们不应直接复制（减少系统开销），而应通过映射的办法，将子进程中对应的逻辑地址空间映射到其父进程中装载代码段的物理页面。这里，就要回到[实验2内存管理](chapter4_memory.md#pagetablecook)部分，寻找合适的函数来实现了。
+然而，对于父进程的代码段，子进程应该如何“继承”呢？通过第185--190行的注释，我们知道对于代码段，我们不应直接复制（减少系统开销），而应通过映射的办法，将子进程中对应的逻辑地址空间映射到其父进程中装载代码段的物理页面。这里，就要回到[实验2内存管理](chapter4_memory.md#pagetablecook)部分，寻找合适的函数来实现了。
+
+
+
+**实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab3_1中所做的工作**：
+
+```bash
+$ git commit -a -m "my work on lab3_1 is done."
+```
+
+
 
 <a name="lab3_2_yield"></a>
 
@@ -569,43 +583,42 @@ user/app_naive_fork.c --> user/user_lib.c --> kernel/strap_vector.S --> kernel/s
 
 ```C
   1 /*
-  2  * This app fork a child process to run.
-  3  * In loops of child process and child process, they give up cpu
-  4  * so that the other one can have some cpu time to run.
-  5  */
-  6
-  7 #include "user/user_lib.h"
-  8 #include "util/types.h"
-  9
- 10 int main(void) {
- 11   uint64 pid = fork();
- 12   uint64 rounds = 0xffff;
- 13   if (pid == 0) {
- 14     printu("Child: Hello world! \n");
- 15     for (uint64 i = 0; i < rounds; ++i) {
- 16       if (i % 10000 == 0) {
- 17         printu("Child running %ld \n", i);
- 18         yield();
- 19       }
- 20     }
- 21   } else {
- 22     printu("Parent: Hello world! \n");
- 23     for (uint64 i = 0; i < rounds; ++i) {
- 24       if (i % 10000 == 0) {
- 25         printu("Parent running %ld \n", i);
- 26         yield();
- 27       }
- 28     }
- 29   }
- 30
- 31   exit(0);
- 32   return 0;
- 33 }
+  2  * The application of lab3_2.
+  3  * parent and child processes intermittently give up their processors.
+  4  */
+  5
+  6 #include "user/user_lib.h"
+  7 #include "util/types.h"
+  8
+  9 int main(void) {
+ 10   uint64 pid = fork();
+ 11   uint64 rounds = 0xffff;
+ 12   if (pid == 0) {
+ 13     printu("Child: Hello world! \n");
+ 14     for (uint64 i = 0; i < rounds; ++i) {
+ 15       if (i % 10000 == 0) {
+ 16         printu("Child running %ld \n", i);
+ 17         yield();
+ 18       }
+ 19     }
+ 20   } else {
+ 21     printu("Parent: Hello world! \n");
+ 22     for (uint64 i = 0; i < rounds; ++i) {
+ 23       if (i % 10000 == 0) {
+ 24         printu("Parent running %ld \n", i);
+ 25         yield();
+ 26       }
+ 27     }
+ 28   }
+ 29
+ 30   exit(0);
+ 31   return 0;
+ 32 }
 ```
 
 和lab3_1一样，以上的应用程序通过fork系统调用创建了一个子进程，接下来，父进程和子进程都进入了一个很长的循环。在循环中，无论是父进程还是子进程，在循环的次数是10000的整数倍时，除了打印信息外都调用了yield()函数，来释放自己的执行权（即CPU）。
 
-- 切换到lab3_2，继承lab3_1及之前实验所做的修改，并make后的直接运行结果：
+- （先提交lab3_1的答案，然后）切换到lab3_2，继承lab3_1及之前实验所做的修改，并make后的直接运行结果：
 
 ```bash
 //切换到lab3_2
@@ -745,6 +758,14 @@ System is shutting down with exit code 0.
 
 
 
+**实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab3_2中所做的工作**：
+
+```bash
+$ git commit -a -m "my work on lab3_2 is done."
+```
+
+
+
 <a name="lab3_3_rrsched"></a>
 
 ## 5.4 lab3_3 循环轮转调度
@@ -755,39 +776,38 @@ System is shutting down with exit code 0.
 
 ```C
   1 /*
-  2  * This app fork a child process to run.
-  3  * Loops in parent process and child process both can have
-  4  * cpu time to run because the kernel will yield when timer interrupt is triggered.
-  5  */
-  6
-  7 #include "user/user_lib.h"
-  8 #include "util/types.h"
-  9
- 10 int main(void) {
- 11   uint64 pid = fork();
- 12   uint64 rounds = 100000000;
- 13   uint64 interval = 10000000;
- 14   uint64 a = 0;
- 15   if (pid == 0) {
- 16     printu("Child: Hello world! \n");
- 17     for (uint64 i = 0; i < rounds; ++i) {
- 18       if (i % interval == 0) printu("Child running %ld \n", i);
- 19     }
- 20   } else {
- 21     printu("Parent: Hello world! \n");
- 22     for (uint64 i = 0; i < rounds; ++i) {
- 23       if (i % interval == 0) printu("Parent running %ld \n", i);
- 24     }
- 25   }
- 26
- 27   exit(0);
- 28   return 0;
- 29 }
+  2  * The application of lab3_3.
+  3  * parent and child processes never give up their processor during execution.
+  4  */
+  5
+  6 #include "user/user_lib.h"
+  7 #include "util/types.h"
+  8
+  9 int main(void) {
+ 10   uint64 pid = fork();
+ 11   uint64 rounds = 100000000;
+ 12   uint64 interval = 10000000;
+ 13   uint64 a = 0;
+ 14   if (pid == 0) {
+ 15     printu("Child: Hello world! \n");
+ 16     for (uint64 i = 0; i < rounds; ++i) {
+ 17       if (i % interval == 0) printu("Child running %ld \n", i);
+ 18     }
+ 19   } else {
+ 20     printu("Parent: Hello world! \n");
+ 21     for (uint64 i = 0; i < rounds; ++i) {
+ 22       if (i % interval == 0) printu("Parent running %ld \n", i);
+ 23     }
+ 24   }
+ 25
+ 26   exit(0);
+ 27   return 0;
+ 28 }
 ```
 
 和lab3_2类似，lab3_3给出的应用仍然是父子两个进程，他们的执行体都是两个大循环。但与lab3_2不同的是，这两个进程在执行各自循环体时，都没有主动释放CPU的动作。显然，这样的设计会导致某个进程长期占据CPU，而另一个进程无法得到执行。
 
-- 切换到lab3_3，继承lab3_2及之前实验所做的修改，并make后的直接运行结果：
+- （先提交lab3_2的答案，然后）切换到lab3_3，继承lab3_2及之前实验所做的修改，并make后的直接运行结果：
 
 ```bash
 //切换到lab3_3
@@ -948,3 +968,348 @@ System is shutting down with exit code 0.
 
 
 
+**实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab3_3中所做的工作**：
+
+```bash
+$ git commit -a -m "my work on lab3_3 is done."
+```
+
+
+
+<a name="lab3_challenge1_wait"></a>
+
+# 5.5 lab3_challenge1 挑战一：进程等待和数据段复制
+
+<a name="lab3_challenge1_app"></a>
+
+#### **给定应用**
+
+- user/app_wait.c
+
+```c
+  1 /*                                                                             
+  2  * This app fork a child process, and the child process fork a grandchild process.
+  3  * every process waits for its own child exit then prints.                     
+  4  * Three processes also write their own global variables "flag"
+  5  * to different values.
+  6  */
+  7 
+  8 #include "user/user_lib.h"
+  9 #include "util/types.h"
+ 10 
+ 11 int flag;
+ 12 int main(void) {
+ 13     flag = 0;
+ 14     int pid = fork();
+ 15     if (pid == 0) {
+ 16         flag = 1;
+ 17         pid = fork();
+ 18         if (pid == 0) {
+ 19             flag = 2;
+ 20             printu("Grandchild process end, flag = %d.\n", flag);
+ 21         } else {
+ 22             wait(pid);
+ 23             printu("Child process end, flag = %d.\n", flag);
+ 24         }
+ 25     } else {
+ 26         wait(-1);
+ 27         printu("Parent process end, flag = %d.\n", flag);
+ 28     }
+ 29     exit(0);
+ 30     return 0;
+ 31 }
+```
+
+wait系统调用是进程管理中一个非常重要的系统调用，它主要有两大功能：
+
+* 当一个进程退出之后，它所占用的资源并不一定能够立即回收，比如该进程的内核栈目前就正用来进行系统调用处理。对于这种问题，一种典型的做法是当进程退出的时候内核立即回收一部分资源并将该进程标记为僵尸进程。由父进程调用wait函数的时候再回收该进程的其他资源。
+* 父进程的有些操作需要子进程运行结束后获得结果才能继续执行，这时wait函数起到进程同步的作用。
+
+在以上程序中，父进程把flag变量赋值为0，然后fork生成一个子进程，接着通过wait函数等待子进程的退出。子进程把自己的变量flag赋值为1，然后fork生成孙子进程，接着通过wait函数等待孙子进程的退出。孙子进程给自己的变量flag赋值为2并在退出时输出信息，然后子进程退出时输出信息，最后父进程退出时输出信息。由于fork之后父子进程的数据段相互独立（同一虚拟地址对应不同的物理地址），子进程对全局变量的赋值不影响父进程全局变量的值，因此结果如下：
+
+```bash
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080009000, PKE kernel size: 0x0000000000009000 .
+free physical memory address: [0x0000000080009000, 0x0000000087ffffff] 
+kernel memory manager is initializing ...
+KERN_BASE 0x0000000080000000
+physical address of _etext is: 0x0000000080005000
+kernel page table is on 
+Switch to user mode...
+in alloc_proc. user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000 
+User application is loading.
+Application: obj/app_wait
+CODE_SEGMENT added at mapped info offset:3
+DATA_SEGMENT added at mapped info offset:4
+Application program entry point (virtual address): 0x00000000000100b0
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+User call fork.
+will fork a child from parent 0.
+in alloc_proc. user frame 0x0000000087fae000, user stack 0x000000007ffff000, user kstack 0x0000000087fad000 
+do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
+going to insert process 1 to ready queue.
+going to insert process 0 to ready queue.
+going to schedule process 1 to run.
+User call fork.
+will fork a child from parent 1.
+in alloc_proc. user frame 0x0000000087fa1000, user stack 0x000000007ffff000, user kstack 0x0000000087fa0000 
+do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
+going to insert process 2 to ready queue.
+going to insert process 1 to ready queue.
+going to schedule process 0 to run.
+going to insert process 0 to ready queue.
+going to schedule process 2 to run.
+Grandchild process end, flag = 2.
+User exit with code:0.
+going to schedule process 1 to run.
+Child process end, flag = 1.
+User exit with code:0.
+going to schedule process 0 to run.
+Parent process end, flag = 0.
+User exit with code:0.
+no more ready processes, system shutdown now.
+System is shutting down with exit code 0.
+```
+
+<a name="lab3_challenge1_content"></a>
+
+####  实验内容
+
+本实验为挑战实验，基础代码将继承和使用lab3_3完成后的代码：
+
+- （先提交lab3_3的答案，然后）切换到lab3_challenge1_wait、继承lab3_3中所做修改：
+
+```bash
+//切换到lab3_challenge1_wait
+$ git checkout lab3_challenge1_wait
+
+//继承lab3_3以及之前的答案
+$ git merge lab3_3_rrsched -m "continue to work on lab3_challenge1"
+```
+
+注意：**不同于基础实验，挑战实验的基础代码具有更大的不完整性，可能无法直接通过构造过程。**
+同样，不同于基础实验，我们在代码中也并未专门地哪些地方的代码需要填写，哪些地方的代码无须填写。这样，我们留给读者更大的“想象空间”。
+
+- 本实验的具体要求为：
+  - 通过修改PKE内核和系统调用，为用户程序提供wait函数的功能，wait函数接受一个参数pid：
+    - 当pid为-1时，父进程等待任意一个子进程退出即返回子进程的pid；
+    - 当pid大于0时，父进程等待进程号为pid的子进程退出即返回子进程的pid；
+    - 如果pid不合法或pid大于0且pid对应的进程不是当前进程的子进程，返回-1。
+  - 补充do_fork函数，实验3_1实现了代码段的复制，你需要继续实现数据段的复制并保证fork后父子进程的数据段相互独立。
+- 注意：最终测试程序可能和给出的用户程序不同，但都只涉及wait函数、fork函数和全局变量读写的相关操作。
+
+<a name="lab3_challenge1_guide"></a>
+
+####  实验指导
+
+* 你对内核代码的修改可能包含添加系统调用、在内核中实现wait函数的功能以及对do_fork函数的完善。
+
+**注意：完成实验内容后，请读者另外编写应用，对自己的实现进行检测。**
+
+**另外，后续的基础实验代码并不依赖挑战实验，所以读者可自行决定是否将自己的工作提交到本地代码仓库中（当然，提交到本地仓库是个好习惯，至少能保存自己的“作品”）。**
+
+<a name="lab3_challenge2_semaphore"></a>
+
+# 5.6 lab3_challenge2 挑战二：实现信号量
+
+<a name="lab3_challenge2_app"></a>
+
+#### **给定应用**
+
+- user/app_semaphore.c
+
+```c
+  1 /*                                                                                                                                       
+  2 * This app create two child process.
+  3 * Use semaphores to control the order of
+  4 * the main process and two child processes print info. 
+  5 */
+  6 #include "user/user_lib.h"
+  7 #include "util/types.h"
+  8 
+  9 int main(void) {
+ 10     int main_sem, child_sem[2];
+ 11     main_sem = sem_new(1);
+ 12     for (int i = 0; i < 2; i++) child_sem[i] = sem_new(0);
+ 13     int pid = fork();
+ 14     if (pid == 0) {
+ 15         pid = fork();
+ 16         for (int i = 0; i < 10; i++) {
+ 17             sem_P(child_sem[pid == 0]);
+ 18             printu("Child%d print %d\n", pid == 0, i);
+ 19             if (pid != 0) sem_V(child_sem[1]); else sem_V(main_sem);
+ 20         }
+ 21     } else {
+ 22         for (int i = 0; i < 10; i++) {
+ 23             sem_P(main_sem);
+ 24             printu("Parent print %d\n", i);
+ 25             sem_V(child_sem[0]);
+ 26         }
+ 27     }
+ 28     exit(0);
+ 29     return 0;
+ 30 }
+```
+
+以上程序通过信号量的增减，控制主进程和两个子进程的输出按主进程，第一个子进程，第二个子进程，主进程，第一个子进程，第二个子进程……这样的顺序轮流输出，如上面的应用预期输出如下：
+
+```bash
+In m_start, hartid:0
+HTIF is available!
+(Emulated) memory size: 2048 MB
+Enter supervisor mode...
+PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080009000, PKE kernel size: 0x0000000000009000 .
+free physical memory address: [0x0000000080009000, 0x0000000087ffffff] 
+kernel memory manager is initializing ...
+KERN_BASE 0x0000000080000000
+physical address of _etext is: 0x0000000080005000
+kernel page table is on 
+Switch to user mode...
+in alloc_proc. user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000 
+User application is loading.
+Application: obj/app_semaphore
+CODE_SEGMENT added at mapped info offset:3
+DATA_SEGMENT added at mapped info offset:4
+Application program entry point (virtual address): 0x00000000000100b0
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+User call fork.
+will fork a child from parent 0.
+in alloc_proc. user frame 0x0000000087fae000, user stack 0x000000007ffff000, user kstack 0x0000000087fad000 
+do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
+going to insert process 1 to ready queue.
+Parent print 0
+going to schedule process 1 to run.
+User call fork.
+will fork a child from parent 1.
+in alloc_proc. user frame 0x0000000087fa2000, user stack 0x000000007ffff000, user kstack 0x0000000087fa1000 
+do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
+going to insert process 2 to ready queue.
+Child0 print 0
+going to schedule process 2 to run.
+Child1 print 0
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+Parent print 1
+going to insert process 1 to ready queue.
+going to schedule process 1 to run.
+Child0 print 1
+going to insert process 2 to ready queue.
+going to schedule process 2 to run.
+Child1 print 1
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+Parent print 2
+going to insert process 1 to ready queue.
+going to schedule process 1 to run.
+Child0 print 2
+going to insert process 2 to ready queue.
+going to schedule process 2 to run.
+Child1 print 2
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+Parent print 3
+going to insert process 1 to ready queue.
+going to schedule process 1 to run.
+Child0 print 3
+going to insert process 2 to ready queue.
+going to schedule process 2 to run.
+Child1 print 3
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+Parent print 4
+going to insert process 1 to ready queue.
+going to schedule process 1 to run.
+Child0 print 4
+going to insert process 2 to ready queue.
+going to schedule process 2 to run.
+Child1 print 4
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+Parent print 5
+going to insert process 1 to ready queue.
+going to schedule process 1 to run.
+Child0 print 5
+going to insert process 2 to ready queue.
+going to schedule process 2 to run.
+Child1 print 5
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+Parent print 6
+going to insert process 1 to ready queue.
+going to schedule process 1 to run.
+Child0 print 6
+going to insert process 2 to ready queue.
+going to schedule process 2 to run.
+Child1 print 6
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+Parent print 7
+going to insert process 1 to ready queue.
+going to schedule process 1 to run.
+Child0 print 7
+going to insert process 2 to ready queue.
+going to schedule process 2 to run.
+Child1 print 7
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+Parent print 8
+going to insert process 1 to ready queue.
+going to schedule process 1 to run.
+Child0 print 8
+going to insert process 2 to ready queue.
+going to schedule process 2 to run.
+Child1 print 8
+going to insert process 0 to ready queue.
+going to schedule process 0 to run.
+Parent print 9
+going to insert process 1 to ready queue.
+User exit with code:0.
+going to schedule process 1 to run.
+Child0 print 9
+going to insert process 2 to ready queue.
+User exit with code:0.
+going to schedule process 2 to run.
+Child1 print 9
+User exit with code:0.
+no more ready processes, system shutdown now.
+System is shutting down with exit code 0.
+```
+
+<a name="lab3_challenge2_content"></a>
+
+####  实验内容
+
+本实验为挑战实验，基础代码将继承和使用lab3_3完成后的代码：
+
+- （先提交lab3_3的答案，然后）切换到lab3_challenge2_semaphore、继承lab3_3中所做修改：
+
+```bash
+//切换到lab3_challenge2_semaphore
+$ git checkout lab3_challenge2_semaphore
+
+//继承lab3_3以及之前的答案
+$ git merge lab3_3_rrsched -m "continue to work on lab3_challenge1"
+```
+
+**注意：不同于基础实验，挑战实验的基础代码具有更大的不完整性，可能无法直接通过构造过程。**
+同样，不同于基础实验，我们在代码中也并未专门地哪些地方的代码需要填写，哪些地方的代码无须填写。这样，我们留给读者更大的“想象空间”。
+
+- 本实验的具体要求为：通过修改PKE内核和系统调用，为用户程序提供信号量功能。
+- 注意：最终测试程序可能和给出的用户程序不同，但都只涉及信号量的相关操作。
+
+<a name="lab3_challenge2_guide"></a>
+
+####  实验指导
+
+* 你对内核代码的修改可能包含以下内容：
+  * 添加系统调用，使得用户对信号量的操作可以在内核态处理
+  * 在内核中实现信号量的分配、释放和PV操作，当P操作处于等待状态时能够触发进程调度
+
+**注意：完成实验内容后，请读者另外编写应用，对自己的实现进行检测。**
+
+**另外，后续的基础实验代码并不依赖挑战实验，所以读者可自行决定是否将自己的工作提交到本地代码仓库中（当然，提交到本地仓库是个好习惯，至少能保存自己的“作品”）。**
