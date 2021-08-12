@@ -1562,7 +1562,7 @@ $ git commit -a -m "my work on lab1_3 is done."
 
 <a name="lab1_challenge1_backtrace"></a>
 
-## 3.5 lab1_challenge1 挑战一：打印用户程序调用栈
+## 3.5 lab1_challenge1 挑战一：打印用户程序调用栈（难度：&#9733;&#9733;&#9734;&#9734;&#9734;）
 
 <a name="lab1_challenge1_app"></a>
 
@@ -1673,7 +1673,7 @@ $ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
 
 <a name="lab1_challenge2_errorline"></a>
 
-# 3.6 lab1_challenge2 挑战二：打印异常代码行
+## 3.6 lab1_challenge2 挑战二：打印异常代码行（难度：&#9733;&#9733;&#9733;&#9733;&#9734;）
 
 <a name="lab1_challenge2_app"></a>
 
