@@ -447,26 +447,26 @@ Disassembly of section .text:
 ...
 ```
 
-通过阅读该文件，我们看到构建过程的最终目标是第115行的all，而它有两个依赖目标：$(KERNEL_TARGET)和$(USER_TARGET)。我们从右往左看，$(USER_TARGET)的定义在72行，对应的是$(OBJ_DIR)/app_helloworld （即./obj/app_helloworld）。构建$(USER_TARGET)的规则在第105--108行，其中第105行说明$(USER_TARGET)的构建依赖$(OBJ_DIR)，$(UTIL_LIB)，$(USER_OBJS)以及$(USER_LDS)这4个目标。
+通过阅读该文件，我们看到构建过程的最终目标是第115行的all，而它有两个依赖目标：`$(KERNEL_TARGET)`和`$(USER_TARGET)`。我们从右往左看，`$(USER_TARGET)`的定义在72行，对应的是`$(OBJ_DIR)/app_helloworld` （即./obj/app_helloworld）。构建`$(USER_TARGET)`的规则在第105--108行，其中第105行说明`$(USER_TARGET)`的构建依赖`$(OBJ_DIR)`，`$(UTIL_LIB)`，`$(USER_OBJS)`以及`$(USER_LDS)`这4个目标。
 
-- $(OBJ_DIR)：它对应的动作是建立5个目录（第75--第80行）：./obj，./obj/util，./obj/spike_interface，./obj/user以及./obj/kernel；
-- $(UTIL_LIB)：它的定义在第33行，它对应的是$(OBJ_DIR)/util.a，而它的编译规则在第90行--第93行，依赖$(UTIL_OBJS)的处理。而后者的定义在第30行，对应`$(addprefix $(OBJ_DIR)/, $(patsubst %.c,%.o,$(UTIL_CPPS)))` ，需要将$(UTIL_CPPS)也就是util/*.c（见第27行）全部编译成.o文件，并链接为静态库（第92行的动作）；
-- $(USER_OBJS)：它对应（第70行）的是`$(addprefix $(OBJ_DIR)/, $(patsubst %.c,%.o,$(USER_CPPS)))`，需要将$(USER_CPPS)也就是user/*.c都编译为.o文件（具体的编译动作由82--84行完成）；
-- $(USER_LDS)：它对应（见第66行）user/user.lds，由于后者已经存在于源代码树中，所以不会导致任何动作。
+- `$(OBJ_DIR)`：它对应的动作是建立5个目录（第75--80行）：./obj，./obj/util，./obj/spike_interface，./obj/user以及./obj/kernel；
+- `$(UTIL_LIB)`：它的定义在第33行，它对应的是`$(OBJ_DIR)/util.a`，而它的编译规则在第90行--第93行，依赖`$(UTIL_OBJS)`的处理。而后者的定义在第30行，对应`$(addprefix $(OBJ_DIR)/, $(patsubst %.c,%.o,$(UTIL_CPPS)))` ，需要将`$(UTIL_CPPS)`也就是util/*.c（见第27行）全部编译成.o文件，并链接为静态库（第92行的动作）；
+- `$(USER_OBJS)`：它对应（第70行）的是`$(addprefix $(OBJ_DIR)/, $(patsubst %.c,%.o,$(USER_CPPS)))`，需要将`$(USER_CPPS)`也就是user/*.c都编译为.o文件（具体的编译动作由82--84行完成）；
+- `$(USER_LDS)`：它对应（见第66行）user/user.lds，由于后者已经存在于源代码树中，所以不会导致任何动作。
 
-以上构造$(USER_TARGET)所依赖的目标全部完成后，构造过程将执行第105--108行的动作，即将user/目录下通过编译出来的.o文件与util中编译和链接出来的静态库文件一起链接，生成采用RISC-V指令集的可执行文件。同时，链接过程采用user/user.lds脚本以指定生成的可执行文件中的符号所对应的逻辑地址。
+以上构造`$(USER_TARGET)`所依赖的目标全部完成后，构造过程将执行第105--108行的动作，即将user/目录下通过编译出来的.o文件与util中编译和链接出来的静态库文件一起链接，生成采用RISC-V指令集的可执行文件。同时，链接过程采用user/user.lds脚本以指定生成的可执行文件中的符号所对应的逻辑地址。
 
-完成$(USER_TARGET)的构造后，我们回到第115行，继续$(KERNEL_TARGET)目标的构造。它的定义在100-103行，可以看到它又有5个依赖目标：$(OBJ_DIR)，$(UTIL_LIB)，$(SPIKE_INF_LIB)，$(KERNEL_OBJS)和$(KERNEL_LDS)。其中$(OBJ_DIR)、$(UTIL_LIB)在构造$(USER_TARGET)目标时就已经顺带地实现了，剩下的$(KERNEL_LDS)也是已经存在的文件。这样，就剩下两个“新”目标：
+完成`$(USER_TARGET)`的构造后，我们回到第115行，继续$(KERNEL_TARGET)目标的构造。它的定义在100-103行，可以看到它又有5个依赖目标：`$(OBJ_DIR)`，`$(UTIL_LIB)`，`$(SPIKE_INF_LIB)`，`$(KERNEL_OBJS)`和`$(KERNEL_LDS)`。其中`$(OBJ_DIR)`、`$(UTIL_LIB)`在构造`$(USER_TARGET)`目标时就已经顺带地实现了，剩下的`$(KERNEL_LDS)`也是已经存在的文件。这样，就剩下两个“新”目标：
 
-- $(SPIKE_INF_LIB)：它的定义在第62行，对应$(OBJ_DIR)/spike_interface.a文件，对应的构造动作在第95--98行，又依赖$(OBJ_DIR)、$(UTIL_OBJS)和$(SPIKE_INF_OBJS)这3个目标。其中$(OBJ_DIR)和$(UTIL_OBJS)两个目标我们在之前构造$(USER_TARGET)时已经解决，剩下的$(SPIKE_INF_OBJS)目标对应的是`$(addprefix $(OBJ_DIR)/, $(patsubst %.c,%.o,$(SPIKE_INF_CPPS)))`将导致$(SPIKE_INF_CPPS)，也就是spike_interface/*.c被对应地编译成.o文件。最后，第96--98行的动作，会将编译spike_interface目录下文件生成的.o文件链接为静态库（$(OBJ_DIR)/spike_interface.a）文件；
-- $(KERNEL_OBJS)：它对应的定义在第49--50行，内容很简单，就是kernel下的所有汇编.S文件和所有的.c文件。处理该依赖构造目标，会将kernel子目录下的所有汇编和C源文件编译成对应的.o文件。
+- `$(SPIKE_INF_LIB)`：它的定义在第62行，对应`$(OBJ_DIR)/spike_interface.a`文件，对应的构造动作在第95--98行，又依赖`$(OBJ_DIR)`、`$(UTIL_OBJS)`和`$(SPIKE_INF_OBJS)`这3个目标。其中`$(OBJ_DIR)`和`$(UTIL_OBJS)`两个目标我们在之前构造`$(USER_TARGET)`时已经解决，剩下的`$(SPIKE_INF_OBJS)`目标对应的是`$(addprefix $(OBJ_DIR)/, $(patsubst %.c,%.o,$(SPIKE_INF_CPPS)))`将导致`$(SPIKE_INF_CPPS)`，也就是spike_interface/*.c被对应地编译成.o文件。最后，第96--98行的动作，会将编译spike_interface目录下文件生成的.o文件链接为静态库（`$(OBJ_DIR)/spike_interface.a`）文件；
+- `$(KERNEL_OBJS)`：它对应的定义在第49--50行，内容很简单，就是kernel下的所有汇编.S文件和所有的.c文件。处理该依赖构造目标，会将kernel子目录下的所有汇编和C源文件编译成对应的.o文件。
 
-以上依赖目标全部构造完毕后，回到第101--103行的$(KERNEL_TARGET)目标所对应的动作，将编译kernel目录下的源文件所得到的.o文件与$(OBJ_DIR)/spike_interface.a进行链接，并最终生成我们的代理内核$(OBJ_DIR)/riscv-pke。至此，PKE实验所需要的代码构造完毕。总结一下，这个构造过程是：
+以上依赖目标全部构造完毕后，回到第101--103行的`$(KERNEL_TARGET)`目标所对应的动作，将编译kernel目录下的源文件所得到的.o文件与`$(OBJ_DIR)/spike_interface.a`进行链接，并最终生成我们的代理内核`$(OBJ_DIR)/riscv-pke`。至此，PKE实验所需要的代码构造完毕。总结一下，这个构造过程是：
 
-- 1）构造util目录下的静态库文件$(OBJ_DIR)/util.a；
-- 2）构造应用程序，得到$(OBJ_DIR)/app_helloworld；
-- 3）构造$(OBJ_DIR)/spike_interface.a，即spike所提供的工具库文件；
-- 4）最后构造代理内核$(OBJ_DIR)/riscv-pke。
+- 1）构造util目录下的静态库文件`$(OBJ_DIR)/util.a`；
+- 2）构造应用程序，得到`$(OBJ_DIR)/app_helloworld`；
+- 3）构造`$(OBJ_DIR)/spike_interface.a`，即spike所提供的工具库文件；
+- 4）最后构造代理内核`$(OBJ_DIR)/riscv-pke`。
 
 
 
