@@ -21,12 +21,12 @@
   - [实验内容](#lab2_3_content)
   - [实验指导](#lab2_3_guide)
 
-- [4.5 lab2_challenge1 挑战一:pagefaults](#lab2_challenge1_pagefault)
+- [4.5 lab2_challenge1 复杂缺页异常（难度：&#9733;&#9734;&#9734;&#9734;&#9734;）](#lab2_challenge1_pagefault)
   - [给定应用](#lab2_challenge1_app)
   - [实验内容](#lab2_challenge1_content)
   - [实验指导](#lab2_challenge1_guide)
 
-- [4.6 lab2_challenge2 挑战二:singlepageheap](#lab2_challenge2_singlepageheap)
+- [4.6 lab2_challenge2 堆空间管理（难度：&#9733;&#9733;&#9733;&#9733;&#9734;）](#lab2_challenge2_singlepageheap)
   - [给定应用](#lab2_challenge2_app)
   - [实验内容](#lab2_challenge2_content)
   - [实验指导](#lab2_challenge2_guide)
@@ -789,7 +789,7 @@ $ git commit -a -m "my work on lab2_3 is done."
 
 <a name="lab2_challenge1_pagefault"></a>
 
-## 4.5 lab2_challenge1 挑战一：pagefaults（难度：&#9733;&#9734;&#9734;&#9734;&#9734;）
+## 4.5 lab2_challenge1 复杂缺页异常（难度：&#9733;&#9734;&#9734;&#9734;&#9734;）
 
 <a name="lab2_challenge1_app"></a>
 
@@ -903,7 +903,7 @@ $ git merge lab2_3_pagefault -m "continue to work on lab2_challenge1"
 
 <a name="lab2_challenge2_singlepageheap"></a>
 
-## 4.6 lab2_challenge2 挑战2：singlepageheap （难度：&#9733;&#9733;&#9733;&#9733;&#9734;）
+## 4.6 lab2_challenge2 堆空间管理 （难度：&#9733;&#9733;&#9733;&#9733;&#9734;）
 
 <a name="lab2_challenge2_app"></a>
 
