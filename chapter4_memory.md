@@ -789,7 +789,7 @@ $ git commit -a -m "my work on lab2_3 is done."
 
 <a name="lab2_challenge1_pagefault"></a>
 
-## 4.5 lab2_challenge1 挑战一：pagefaults
+## 4.5 lab2_challenge1 挑战一：pagefaults（难度：&#9733;&#9734;&#9734;&#9734;&#9734;）
 
 <a name="lab2_challenge1_app"></a>
 
@@ -903,7 +903,7 @@ $ git merge lab2_3_pagefault -m "continue to work on lab2_challenge1"
 
 <a name="lab2_challenge2_singlepageheap"></a>
 
-## 4.6 lab2_challenge2 挑战2：singlepageheap
+## 4.6 lab2_challenge2 挑战2：singlepageheap （难度：&#9733;&#9733;&#9733;&#9733;&#9734;）
 
 <a name="lab2_challenge2_app"></a>
 
