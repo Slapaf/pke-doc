@@ -135,12 +135,12 @@ PKE实验将提供基于华为openEuler操作系统的开发方法，*具体的�
 
 #### 代码获取
 
-在Ubuntu/openEuler操作系统，可以通过以下命令下载riscv-pke的实验代码：
+在Ubuntu/WSL/openEuler操作系统，可以通过以下命令下载riscv-pke的实验代码：
 
 （克隆代码仓库）
 
 ```
-`$ git clone https://gitee.com/hustos/riscv-pke-prerelease.git
+`$ git clone https://gitee.com/hustos/riscv-pke.git
 Cloning into 'riscv-pke-prerelease'...
 remote: Enumerating objects: 195, done.
 remote: Counting objects: 100% (195/195), done.
@@ -152,7 +152,7 @@ Resolving deltas: 100% (107/107), done.`
 
 克隆完成后，将在当前目录应该能看到riscv-pke-prerelease目录。这时，可以到riscv-pke目录下查看文件结构，例如：
 
-`$ cd riscv-pke-prerelease`
+`$ cd riscv-pke`
 
 切换到lab1_1_syscall分支（因为lab1_1_syscall是默认分支，这里也可以不切换）
 `$ git checkout lab1_1_syscall`
@@ -166,7 +166,6 @@ Resolving deltas: 100% (107/107), done.`
 ├── LICENSE.txt
 ├── Makefile
 ├── README.md
-├── grade.py
 ├── kernel
 │   ├── config.h
 │   ├── elf.c
@@ -229,7 +228,7 @@ Resolving deltas: 100% (107/107), done.`
 
 #### 环境验证
 
-对于Ubuntu/openEuler用户（对于头歌用户，可以通过选择“命令行”标签，进入shell环境、进入提示的代码路径，开始构造过程），可以在代码的根目录（进入riscv-pke-prerelease子目录后）输入以下构造命令，应看到如下输出：
+对于Ubuntu/WSL/openEuler用户（对于头歌用户，可以通过选择“命令行”标签，进入shell环境、进入提示的代码路径，开始构造过程），可以在代码的根目录（进入riscv-pke-prerelease子目录后）输入以下构造命令，应看到如下输出：
 
 ```
 $ make

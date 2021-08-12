@@ -50,7 +50,7 @@
 
 例如，我们有以下简单Hello world!程序（在当前目录编辑helloworld.c文件）：
 
-```
+```c
   1 #include <stdio.h>
   2
   3 int main()
@@ -70,7 +70,7 @@
 
 该命令执行后，我们将在当前目录得到helloworld.o文件，使用file命令对该文件进行观察：
 
-```
+```bash
 $ file ./helloworld.o
 ./helloworld.o: ELF 64-bit LSB relocatable, UCB RISC-V, version 1 (SYSV), not stripped
 ```
@@ -93,7 +93,7 @@ $ file ./helloworld.o
 
 该命令将在当前目录生成helloworld文件，我们仍然用file命令查看该文件的信息：
 
-```
+```bash
 $ file ./helloworld
 ./helloworld: ELF 64-bit LSB executable, UCB RISC-V, version 1 (SYSV), statically linked, not stripped
 ```
@@ -102,7 +102,7 @@ $ file ./helloworld
 
 接下来，我们了解一下helloworld的结构。首先通过riscv64-unknown-elf-readelf -h命令，了解该ELF文件的文件头信息：
 
-```
+```bash
 $ riscv64-unknown-elf-readelf -h ./helloworld
 ELF Header:
   Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
@@ -130,7 +130,7 @@ ELF Header:
 
 接下来，我们可以通过riscv64-unknown-elf-readelf -S命令了解helloworld可执行程序包含哪些程序节：
 
-```
+```bash
 $ riscv64-unknown-elf-readelf -S ./helloworld
 There are 15 section headers, starting at offset 0x4bf0:
 
@@ -178,7 +178,7 @@ Key to Flags:
 
 由于helloworld是可执行程序，且根据riscv64-unknown-elf-readelf -h命令的输出，我们已知该程序有2个程序段（segment），接下来我们再通过riscv64-unknown-elf-readelf -l查看该可执行程序的程序段组成：
 
-```
+```bash
 $ riscv64-unknown-elf-readelf -l ./helloworld
 
 Elf file type is EXEC (Executable file)
@@ -203,7 +203,7 @@ Program Headers:
 
 为了对helloworld文件进行进一步理解，我们使用objdump命令将它进行反汇编处理（使用`-D`开关反汇编所有的段），并列出3个有效段（省略辅助段，也省略gcc加入的一些辅助函数和辅助数据结构）：
 
-```
+```bash
 $ riscv64-unknown-elf-objdump -D ./helloworld | less
 
 ./helloworld:     file format elf64-littleriscv
@@ -245,7 +245,7 @@ Disassembly of section .text:
 
 那么，是否有办法指定某符号对应的逻辑地址呢？答案是可以，但只能指定符号所在的段的起始逻辑地址，方法是通过lds链接脚本。我们还是用以上的helloworld.c作为例子，另外创建和编辑一个lds链接脚本，即helloworld_lds.lds文件：
 
-```
+```bash
   1 OUTPUT_ARCH( "riscv" )
   2
   3 ENTRY(main)
@@ -266,7 +266,7 @@ Disassembly of section .text:
 
 为了避免库函数的“干扰”，我们将3.1.2中的helloworld.c代码进行了修改（helloworld_with_lds.c），去掉了printf的调用转用一个加法语句作为main函数的主体：
 
-```
+```c
   1 #include <stdio.h>
   2
   3 int main()
@@ -283,7 +283,7 @@ Disassembly of section .text:
 
 并对重新生成的helloworld_with_lds文件进行观察：
 
-```
+```bash
 $ riscv64-unknown-elf-readelf -h ./helloworld_with_lds
 ELF Header:
   Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
@@ -309,7 +309,7 @@ ELF Header:
 
 以上的输出表明，它的入口地址变成了0x81000000（也就是由helloworld_lds.lds所指定的地址），另外采用`riscv64-unknown-elf-objdump -D ./helloworld_with_lds`命令观察helloworld_with_lds文件中符号地址main所对应的逻辑地址，有以下输出：
 
-```
+```bash
 $ riscv64-unknown-elf-objdump -D ./helloworld_with_lds | less
 
 ./helloworld_with_lds:     file format elf64-littleriscv
@@ -341,11 +341,11 @@ Disassembly of section .text:
 
 ### 3.1.3 代理内核的构造过程
 
-这里我们讨论lab1_1中代理内核，以及其上运行的应用的构造（build）过程。PKE实验采用了Linux中广泛采用的make软件包完成内核、支撑库，以及应用的构造。关于Makefile的编写，我们建议读者阅读[这篇文章](https://blog.csdn.net/foryourface/article/details/34058577)了解make文件的基础知识，这里仅讨论lab1_1的Makefile以及对应的构造过程。PKE的后续实验实际上采用的Makefile跟lab1_1的非常类似，所以我们在后续章节中不再对它们的构建过程进行讨论。
+这里我们讨论lab1_1中代理内核，以及其上运行的应用的构造（build）过程。PKE实验采用了Linux中广泛采用的make软件包完成内核、支撑库，以及应用的构造。关于Makefile的编写，我们建议读者阅读[这里](https://blog.csdn.net/foryourface/article/details/34058577)了解make文件的基础知识，这里仅讨论lab1_1的Makefile以及对应的构造过程。PKE的后续实验实际上采用的Makefile跟lab1_1的非常类似，所以我们在后续章节中不再对它们的构建过程进行讨论。
 
 我们首先观察lab1_1中位于根目录的Makefile文件（摘取其中我们认为重要的内容）：
 
-```
+```makefile
   8 CROSS_PREFIX    := riscv64-unknown-elf-
   9 CC              := $(CROSS_PREFIX)gcc
  10 AR              := $(CROSS_PREFIX)ar
@@ -477,7 +477,7 @@ Disassembly of section .text:
 
 在3.1.1中，我们获取riscv-pke的代码并完成构造步骤后，我们将通过以下命令开始lab1_1所给定的应用的执行：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_helloworld
 In m_start, hartid:0
 HTIF is available!
@@ -495,7 +495,7 @@ System is shutting down with exit code -1.
 
 那么代理内核是如何在spike模拟的RISC-V机器上启动的呢？实际上，这个启动过程比我们实际的物理机的启动过程简单得多，*代理内核实际上是spike模拟器将其当作是一个标准ELF文件载入的*。那么既然是“可执行”的ELF文件，我们就可以用交叉编译器里提供的工具观察它的结构：
 
-```
+```bash
 $ riscv64-unknown-elf-readelf -h ./obj/riscv-pke
 ELF Header:
   Magic:   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00
@@ -544,7 +544,7 @@ Program Headers:
 
 另外，./obj/riscv-pke的入口地址0x80000548对应代码中的哪个函数呢？这给我们也可以通过阅读kernel/kernel.lds得知：
 
-```
+```bash
   1 /* See LICENSE for license details. */
   2
   3 OUTPUT_ARCH( "riscv" )
@@ -579,7 +579,7 @@ Program Headers:
 
 以上列出了部分kernel/kernel.lds的内容，从第5行可知内核的入口地址是_mentry 函数，通过:
 
-```
+```bash
 $ riscv64-unknown-elf-objdump -D ./obj/riscv-pke | grep _mentry
 0000000080000548 <_mentry>:
 ```
@@ -588,58 +588,56 @@ $ riscv64-unknown-elf-objdump -D ./obj/riscv-pke | grep _mentry
 
 实际上_mentry函数是在kernel/machine/mentry.S文件中定义的：
 
-```
- 10   .globl _mentry
- 11 _mentry:
- 12     csrw mscratch, x0   # [mscratch] = 0; mscratch points the stack bottom of machine mode computer
- 13
- 14     # following codes allocate a 4096-byte stack for each HART, although we use only ONE HART in this lab.
- 15     la sp, stack0       # stack0 is statically defined in kernel/machine/minit.c
- 16     li a3, 4096         # 4096-byte stack
- 17     csrr a4, mhartid    # [mhartid] = core ID
- 18     addi a4, a4, 1
- 19     mul a3, a3, a4
- 20     add sp, sp, a3      # re-arrange the stack points so that they don't overlap with each other
- 21
- 22     # jump to mstart(), i.e., machine state start function in kernel/machine/minit.c
- 23     call m_start
-```
-
-它的执行将机器复位（12行）为在不同处理器上（我们在lab1_1中只考虑单个内核）运行的内核分配大小为4KB的栈（15--20行），并在最后（23行）调用m_start函数。m_start函数是在kernel/machine/minit.c文件中定义的：
-
-```
- 88 void m_start(uintptr_t hartid, uintptr_t dtb) {
- 89   // init the spike file interface (stdin,stdout,stderr)
- 90   spike_file_init();
- 91   sprint("In m_start, hartid:%d\n", hartid);
- 92
- 93   // init HTIF (Host-Target InterFace) and memory by using the Device Table Blob (DTB)
- 94   init_dtb(dtb);
- 95
- 96   setup_pmp();
- 97
- 98   // set previous privilege mode to S (Supervisor), and will enter S mode after 'mret'
- 99   write_csr(mstatus, ((read_csr(mstatus) & ~MSTATUS_MPP_MASK) | MSTATUS_MPP_S));
-100
-101   // set M Exception Program Counter to sstart, for mret (requires gcc -mcmodel=medany)
-102   write_csr(mepc, (uint64)s_start);
-103
-104   // delegate all interrupts and exceptions to supervisor mode.
-105   delegate_traps();
-106
-107   // switch to supervisor mode and jump to s_start(), i.e., set pc to mepc
-108   asm volatile("mret");
-109 }
+```assembly
+ 13   .globl _mentry
+ 14 _mentry:
+ 15     # [mscratch] = 0; mscratch points the stack bottom of machine mode computer
+ 16     csrw mscratch, x0
+ 17
+ 18     # following codes allocate a 4096-byte stack for each HART, although we use only
+ 19     # ONE HART in this lab.
+ 20     la sp, stack0       # stack0 is statically defined in kernel/machine/minit.c
+ 21     li a3, 4096         # 4096-byte stack
+ 22     csrr a4, mhartid    # [mhartid] = core ID
+ 23     addi a4, a4, 1
+ 24     mul a3, a3, a4
+ 25     add sp, sp, a3      # re-arrange the stack points so that they don't overlap
+ 26
+ 27     # jump to mstart(), i.e., machine state start function in kernel/machine/minit.c
+ 28     call m_start
 ```
 
-它的作用是首先初始化spike的客户机-主机接口（Host-Target InterFace，简称HTIF），以及承载于其上的文件接口（90-94行）；其次，设置物理内存保护physical memory protection（简称pmp，第96行。pmp机制类似操作系统原理课程中学习的上下界保护法，原理上是采用上下界的办法将物理内存分为多个区间，规定软件在这些区间里的权限。）；人为的将上一个状态（机器启动时的状态为M态，即Machine态）设置为S（Supervisor）态，并将“退回”到S态的函数指针s_start写到mepc寄存器中（99--102行）；接下来，将中断异常处理“代理”给S态（105行）；最后，执行返回动作（108行）。由于之前人为地将上一个状态设置为S态，所以108行的返回动作将“返回”S态，并进入s_start函数执行。
+它的执行将机器复位（16行）为在不同处理器上（我们在lab1_1中只考虑单个内核）运行的内核分配大小为4KB的栈（20--25行），并在最后（28行）调用m_start函数。m_start函数是在kernel/machine/minit.c文件中定义的：
+
+```c
+ 68 void m_start(uintptr_t hartid, uintptr_t dtb) {
+ 69   // init the spike file interface (stdin,stdout,stderr)
+ 70   spike_file_init();
+ 71   sprint("In m_start, hartid:%d\n", hartid);
+ 72
+ 73   // init HTIF (Host-Target InterFace) and memory by using the Device Table Blob (DTB)
+ 74   init_dtb(dtb);
+ 75
+ 76   // set previous privilege mode to S (Supervisor), and will enter S mode after 'mret'
+ 77   write_csr(mstatus, ((read_csr(mstatus) & ~MSTATUS_MPP_MASK) | MSTATUS_MPP_S));
+ 78
+ 79   // set M Exception Program Counter to sstart, for mret (requires gcc -mcmodel=medany)
+ 80   write_csr(mepc, (uint64)s_start);
+ 81
+ 82   // delegate all interrupts and exceptions to supervisor mode.
+ 83   delegate_traps();
+ 84
+ 85   // switch to supervisor mode and jump to s_start(), i.e., set pc to mepc
+ 86   asm volatile("mret");
+ 87 }
+```
+
+它的作用是首先初始化spike的客户机-主机接口（Host-Target InterFace，简称HTIF），以及承载于其上的文件接口（70-74行）；人为的将上一个状态（机器启动时的状态为M态，即Machine态）设置为S（Supervisor）态，并将“退回”到S态的函数指针s_start写到mepc寄存器中（77--80行）；接下来，将中断异常处理“代理”给S态（83行）；最后，执行返回动作（86行）。由于之前人为地将上一个状态设置为S态，所以86行的返回动作将“返回”S态，并进入s_start函数执行。
 
 s_start函数在kernel/kernel.c文件中定义：
 
-```
- 28 int s_start(void) {
- 29   process user_app;
- 30
+```c
+ 30 int s_start(void) {
  31   sprint("Enter supervisor mode...\n");
  32   // Note: we use direct (i.e., Bare mode) for memory mapping in lab1.
  33   // which means: Virtual Address = Physical Address
@@ -648,7 +646,7 @@ s_start函数在kernel/kernel.c文件中定义：
  36   // the application code (elf) is first loaded into memory, and then put into execution
  37   load_user_program(&user_app);
  38
- 39   sprint("Switching to user mode...\n");
+ 39   sprint("Switch to user mode...\n");
  40   switch_to(&user_app);
  41
  42   return 0;
@@ -659,34 +657,36 @@ s_start函数在kernel/kernel.c文件中定义：
 
 以上过程中，load_user_program()函数的作用是将我们的给定应用（user/app_helloworld.c）所对应的可执行ELF文件（即./obj/app_helloworld文件），这个过程我们将在3.1.5中详细讨论。另一个函数是switch_to()，为了理解这个函数的行为，需要先对lab1中“进程”的定义有一定的了解（kernel/process.h）：
 
-```
- 17 typedef struct process {
- 18   // pointing to the stack used in trap handling.
- 19   uint64 kstack;
- 20   // trapframe storing the context of a (User mode) process.
- 21   trapframe* trapframe;
- 22 }process;
+```c
+ 19 typedef struct process {
+ 20   // pointing to the stack used in trap handling.
+ 21   uint64 kstack;
+ 22   // trapframe storing the context of a (User mode) process.
+ 23   trapframe* trapframe;
+ 24 }process;
 ```
 
 可以看到，lab1中定义的“进程”非常简单，它只包含了一个栈指针（kstack）以及一个指向trapframe结构的指针。trapframe结构也在kernel/process.h文件中被定义：
 
-```
+```C
   6 typedef struct trapframe {
-  7   /*   0 */ uint64 kernel_satp;    // kernel page table（unused now）
-  8   /*   8 */ uint64 kernel_sp;      // top of process's kernel stack
-  9   /*  16 */ uint64 kernel_trap;    // usertrap()
- 10   /*  24 */ uint64 epc;            // saved user process counter
- 11   /*  32 */ uint64 kernel_hartid;  // saved kernel tp（unused now）
- 12   // starting from here, space to store context (all common registers)
- 13   riscv_regs regs;
- 14 }trapframe;
+  7   // space to store context (all common registers)
+  8   /* offset:0   */ riscv_regs regs;
+  9
+ 10   // process's "user kernel" stack
+ 11   /* offset:248 */ uint64 kernel_sp;
+ 12   // pointer to smode_trap_handler
+ 13   /* offset:256 */ uint64 kernel_trap;
+ 14   // saved user process counter
+ 15   /* offset:264 */ uint64 epc;
+ 16 }trapframe;
 ```
 
 该结构除了记录进程上下文的RISC-V机器的通用寄存器组（regs成员）外，还包括很少的其他成员（如指向内核态栈顶的kernel_sp，指向内核态trap处理函数入口的kernel_trap指针，进程执行的当前位置epc）。
 
 回到switch_to()函数，它在kernel/process.c文件中定义：
 
-```
+```c
  28 void switch_to(process* proc) {
  29   assert(proc);
  30   current = proc;
@@ -717,23 +717,23 @@ s_start函数在kernel/kernel.c文件中定义：
 
 可以看到，该函数的作用是初始化进程的process结构体，并最终调用return_to_user(proc->trapframe)函数将载入的应用（所封装的进程）投入运行。return_to_user()函数在kernel/strap_vector.S文件中定义：
 
-```
- 43 .globl return_to_user
- 44 return_to_user:
- 45     # save a0 in sscratch, so sscratch points to a trapframe now.
- 46     csrw sscratch, a0
- 47
- 48     # bypass the first 5 members of structure trapframe
- 49     addi t6, a0, 40
- 50
- 51     # restore all registers from trapframe, so as to resort the execution of a process
- 52     restore_all_registers
- 53
- 54     # return to user mode and user pc (using the first 5 members of structure trapframe).
- 55     sret
+```assembly
+ 45 .globl return_to_user
+ 46 return_to_user:
+ 47     # save a0 in sscratch, so sscratch points to a trapframe now.
+ 48     csrw sscratch, a0
+ 49
+ 50     # let [t6]=[a0]
+ 51     addi t6, a0, 0
+ 52
+ 53     # restore all registers from trapframe, so as to resort the execution of a process
+ 54     restore_all_registers
+ 55
+ 56     # return to user mode and user pc.
+ 57     sret
 ```
 
-其作用是恢复进程的上下文（52行）到RISC-V机器的所有寄存器，并调用sret指令，从S模式“返回”应用模式（即U模式）。这样，所载入的应用程序（即obj/app_helloworld所对应的“进程”）就投入运行了。
+其作用是恢复进程的上下文（54行）到RISC-V机器的所有寄存器，并调用sret指令，从S模式“返回”应用模式（即U模式）。这样，所载入的应用程序（即obj/app_helloworld所对应的“进程”）就投入运行了。
 
 
 
@@ -743,61 +743,61 @@ s_start函数在kernel/kernel.c文件中定义：
 
 这里我们对load_user_program()函数进行讨论，它在kernel/kernel.c中定义：
 
-```
- 16 void load_user_program(process *proc) {
- 17   proc->trapframe = (trapframe *)USER_TRAP_FRAME;
- 18   memset(proc->trapframe, 0, sizeof(trapframe));
- 19   proc->kstack = USER_KSTACK;
- 20   proc->trapframe->regs.sp = USER_STACK;
- 21
- 22   load_bincode_from_host_elf(proc);
- 23 }
+```c
+ 18 void load_user_program(process *proc) {
+ 19   proc->trapframe = (trapframe *)USER_TRAP_FRAME;
+ 20   memset(proc->trapframe, 0, sizeof(trapframe));
+ 21   proc->kstack = USER_KSTACK;
+ 22   proc->trapframe->regs.sp = USER_STACK;
+ 23
+ 24   load_bincode_from_host_elf(proc);
+ 25 }
 ```
 
 我们看到，它的作用是首先对进程壳做了一定的初始化，最后调用load_bincode_from_host_elf()函数将应用程序对应的二进制代码实际地载入。load_bincode_from_host_elf()函数在kernel/elf.c文件中实际定义：
 
-```
-108 void load_bincode_from_host_elf(struct process *p) {
-109   arg_buf arg_bug_msg;
-110
-111   // retrieve command line arguements
-112   size_t argc = parse_args(&arg_bug_msg);
-113   if (!argc) panic("You need to specify the application program!\n");
-114
-115   sprint("Application: %s\n", arg_bug_msg.argv[0]);
-116
-117   //elf loading
-118   elf_ctx elfloader;
-119   elf_info info;
-120
-121   info.f = spike_file_open(arg_bug_msg.argv[0], O_RDONLY, 0);
-122   info.p = p;
-123   if (IS_ERR_VALUE(info.f)) panic("Fail on openning the input application program.\n");
-124
-125   // init elfloader
-126   if (elf_init(&elfloader, &info) != EL_OK)
-127     panic("fail to init elfloader.\n");
-128
-129   // load elf
-130   if (elf_load(&elfloader) != EL_OK) panic("Fail on loading elf.\n");
-131
-132   // entry (virtual) address
-133   p->trapframe->epc = elfloader.ehdr.entry;
-134
-135   // close host file
-136   spike_file_close( info.f );
-137
-138   sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
-139 }
+```c
+103 void load_bincode_from_host_elf(struct process *p) {
+104   arg_buf arg_bug_msg;
+105
+106   // retrieve command line arguements
+107   size_t argc = parse_args(&arg_bug_msg);
+108   if (!argc) panic("You need to specify the application program!\n");
+109
+110   sprint("Application: %s\n", arg_bug_msg.argv[0]);
+111
+112   //elf loading
+113   elf_ctx elfloader;
+114   elf_info info;
+115
+116   info.f = spike_file_open(arg_bug_msg.argv[0], O_RDONLY, 0);
+117   info.p = p;
+118   if (IS_ERR_VALUE(info.f)) panic("Fail on openning the input application program.\n");
+119
+120   // init elfloader
+121   if (elf_init(&elfloader, &info) != EL_OK)
+122     panic("fail to init elfloader.\n");
+123
+124   // load elf
+125   if (elf_load(&elfloader) != EL_OK) panic("Fail on loading elf.\n");
+126
+127   // entry (virtual) address
+128   p->trapframe->epc = elfloader.ehdr.entry;
+129
+130   // close host file
+131   spike_file_close( info.f );
+132
+133   sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
+134 }
 ```
 
 该函数的大致过程是：
 
-- （112--115行）首先，解析命令行参数，获得需要加载的ELF文件文件名；
-- （118--127行）接下来初始化ELF加载数据结构，并打开即将被加载的ELF文件；
-- （130行）加载ELF文件；
-- （133行）通过ELF文件提供的入口地址设置进程的trapframe->epc，保证“返回”用户态的时候，所加载的ELF文件被执行；
-- （136--139行）关闭ELF文件并返回。
+- （107--108行）首先，解析命令行参数，获得需要加载的ELF文件文件名；
+- （113--122行）接下来初始化ELF加载数据结构，并打开即将被加载的ELF文件；
+- （125行）加载ELF文件；
+- （128行）通过ELF文件提供的入口地址设置进程的trapframe->epc，保证“返回”用户态的时候，所加载的ELF文件被执行；
+- （131--133行）关闭ELF文件并返回。
 
 该函数用到了同文件中的诸多工具函数，这些函数的细节请读者自行阅读相关代码，这里我们只贴我们认为重要的代码：
 
@@ -805,46 +805,41 @@ s_start函数在kernel/kernel.c文件中定义：
 - elf_init：该函数的作用是初始化elf_ctx类型的elfloader结构体。该初始化过程将读取给定ELF的文件头，确保它是一个正确的ELF文件；
 - elf_load：读入ELF文件中所包含的程序段（segment）到给定的内存地址中。elf_load的具体实现如下：
 
-```
-  51 elf_status elf_load(elf_ctx *ctx) {
-  52   elf_prog_header ph_addr;
-  53   int i, off;
-  54
-  55   sprint( "elf_load: ctx->ehdr.phoff = %d, ctx->ehdr.phnum =%d, sizeof(ph_addr)=%d.\n",
-  56     ctx->ehdr.phoff, ctx->ehdr.phnum, sizeof(ph_addr) );
-  57   // traverse the elf program segment headers
-  58   for (i = 0, off = ctx->ehdr.phoff; i < ctx->ehdr.phnum; i++, off += sizeof(ph_addr)) {
-  59     // read segment headers
-  60     if (elf_fpread(ctx, (void *)&ph_addr, sizeof(ph_addr), off) != sizeof(ph_addr)) return EL_EIO;
-  61
-  62     if (ph_addr.type != ELF_PROG_LOAD) continue;
-  63     if (ph_addr.memsz < ph_addr.filesz) return EL_ERR;
-  64     if (ph_addr.vaddr + ph_addr.memsz < ph_addr.vaddr) return EL_ERR;
-  65
-  66     // allocate memory before loading
-  67     void *dest = elf_alloccb(ctx, ph_addr.vaddr, ph_addr.vaddr, ph_addr.memsz);
-  68
-  69     sprint( "elf_load: ph_addr.memsz = %d, ph_addr.off =%d.\n", ph_addr.memsz, ph_addr.off );
-  70
-  71     // actual loading
-  72     if (elf_fpread(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
-  73       return EL_EIO;
-  74   }
-  75
-  76   return EL_OK;
-  77 }
+```c
+ 51 elf_status elf_load(elf_ctx *ctx) {
+ 52   elf_prog_header ph_addr;
+ 53   int i, off;
+ 54   // traverse the elf program segment headers
+ 55   for (i = 0, off = ctx->ehdr.phoff; i < ctx->ehdr.phnum; i++, off += sizeof(ph_addr)) {
+ 56     // read segment headers
+ 57     if (elf_fpread(ctx, (void *)&ph_addr, sizeof(ph_addr), off) != sizeof(ph_addr)) return EL_EIO;
+ 58
+ 59     if (ph_addr.type != ELF_PROG_LOAD) continue;
+ 60     if (ph_addr.memsz < ph_addr.filesz) return EL_ERR;
+ 61     if (ph_addr.vaddr + ph_addr.memsz < ph_addr.vaddr) return EL_ERR;
+ 62
+ 63     // allocate memory before loading
+ 64     void *dest = elf_alloc_mb(ctx, ph_addr.vaddr, ph_addr.vaddr, ph_addr.memsz);
+ 65
+ 66     // actual loading
+ 67     if (elf_fpread(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
+ 68       return EL_EIO;
+ 69   }
+ 70
+ 71   return EL_OK;
+ 72 }
 ```
 
-这个函数里，我们需要说一下elf_alloccb()函数，该函数返回代码段将要加载进入的地址dest。由于我们在lab1全面采用了直地址映射模式（Bare mode，也就是说：逻辑地址=物理地址），对于lab1全系列的实验来说，elf_alloccb()返回的装载地址实际上就是物理地址。
+这个函数里，我们需要说一下elf_alloc_mb()函数，该函数返回代码段将要加载进入的地址dest。由于我们在lab1全面采用了直地址映射模式（Bare mode，也就是说：逻辑地址=物理地址），对于lab1全系列的实验来说，elf_alloc_mb()返回的装载地址实际上就是物理地址。
 
-```
- 19 static void *elf_alloccb(elf_ctx *ctx, uint64 elf_pa, uint64 elf_va, uint64 size) {
- 20   // directly returns the virtual address as we are in the Bare mode memory mapping in lab1
+```c
+ 19 static void *elf_alloc_mb(elf_ctx *ctx, uint64 elf_pa, uint64 elf_va, uint64 size) {
+ 20   // directly returns the virtual address as we are in the Bare mode in lab1
  21   return (void *)elf_va;
  22 }
 ```
 
-但是，到了实验二（lab2系列），我们将开启RISC-V的分页模式（sv39），届时elf_alloccb函数将发生变化。
+但是，到了实验二（lab2系列），我们将开启RISC-V的分页模式（sv39），届时elf_alloc_mb函数将发生变化。
 
 
 
@@ -876,7 +871,7 @@ spike基于HTIF内存的传递，定义了一组HTIF调用（类似于操作系�
 #### **给定应用**
 - user/app_helloworld.c
 
-```
+```c
   1 /*
   2  * Below is the given application for lab1_1.
   3  *
@@ -900,7 +895,7 @@ spike基于HTIF内存的传递，定义了一组HTIF调用（类似于操作系�
 
 - make后的直接运行结果：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_helloworld
 In m_start, hartid:0
 HTIF is available!
@@ -924,7 +919,7 @@ System is shutting down with exit code -1.
 
 如输出提示所表示的那样，需要找到并完成对do_syscall的调用，并获得以下预期结果：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_helloworld
 In m_start, hartid:0
 HTIF is available!
@@ -944,7 +939,7 @@ System is shutting down with exit code 0.
 
 lab1_1实验需要读者了解和掌握操作系统中系统调用机制的实现原理。从应用出发，我们发现user/app_helloworld.c文件中有两个函数调用：printu和exit。对代码进行跟踪，我们发现这两个函数都在user/user_lib.c中进行了实现，同时，这两个函数最后都转换成了对do_user_call的调用。查看do_user_call函数的实现：
 
-```
+```c
  13 int do_user_call(uint64 sysnum, uint64 a1, uint64 a2, uint64 a3, uint64 a4, uint64 a5, uint64 a6,
  14                  uint64 a7) {
  15   int ret;
@@ -964,92 +959,94 @@ lab1_1实验需要读者了解和掌握操作系统中系统调用机制的实�
 
 我们发现，do_user_call函数是通过ecall指令完成系统调用的，且在执行ecall指令前，所有的参数（即do_user_call函数的8个参数）实际上都已经载入到RISC-V机器的a0到a7这8个寄存器中（这一步是我们的编译器生成的代码帮我们完成的）。ecall指令的执行将根据a0中的值获得系统调用号，并使RISC-V转到S模式（因为我们的操作系统内核启动时将所有的中断、异常、系统调用都代理给了S模式）的trap处理入口执行（在kernel/strap_vector.S文件中定义）：
 
-```
- 14 .globl smode_trap_vector
- 15 .align 4
- 16 smode_trap_vector:
- 17     # swap a0 and sscratch, so that points a0 to the trapframe of current process
- 18     csrrw a0, sscratch, a0
- 19
- 20     # save the user registers in the trapframe of current process, refers to kernel/process.h
- 21     # bypass the first 5 members of structure trapframe
- 22     addi t6, a0 , 40
- 23     store_all_registers
- 24
- 25     # come back to save a0 register before entering trap handling in trapframe
- 26     csrr t0, sscratch
- 27     sd t0, 112(a0)
- 28
- 29     # restore kernel stack pointer from p->trapframe->kernel_sp
- 30     ld sp, 8(a0)
- 31
- 32     # load the address of smode_trap_handler() from p->trapframe->kernel_trap
- 33     ld t0, 16(a0)
- 34
- 35     # jump to smode_trap_handler() in kernel/trap.c
- 36     jr t0
+```assembly
+ 16 .globl smode_trap_vector
+ 17 .align 4
+ 18 smode_trap_vector:
+ 19     # swap a0 and sscratch, so that points a0 to the trapframe of current process
+ 20     csrrw a0, sscratch, a0
+ 21
+ 22     # save the context (user registers) of current process in its trapframe.
+ 23     addi t6, a0 , 0
+ 24     store_all_registers
+ 25
+ 26     # come back to save a0 register before entering trap handling in trapframe
+ 27     csrr t0, sscratch
+ 28     sd t0, 72(a0)
+ 29
+ 30     # use the "user kernel" stack (whose pointer stored in p->trapframe->kernel_sp)
+ 31     ld sp, 248(a0)
+ 32
+ 33     # load the address of smode_trap_handler() from p->trapframe->kernel_trap
+ 34     ld t0, 256(a0)
+ 35
+ 36     # jump to smode_trap_handler() that is defined in kernel/trap.c
+ 37     jr t0
 ```
 
-从以上代码我们可以看到，trap的入口处理函数首先将“进程”（即我们的obj/app_helloworld的运行现场）进行保存（第23行）；接下来将a0寄存器中的系统调用号保存到内核堆栈（第26--27行），再将p->trapframe->kernel_sp指向的为应用进程分配的内核栈设置到sp寄存器（第30行，即切换堆栈，而不使用PKE内核自己的栈，**这里请读者思考为何要这样安排？**），后续的执行将使用应用进程所附带的内核栈来保存执行的上下文，如函数调用、临时变量这些；最后，将应用进程中的p->trapframe->kernel_trap写入t0寄存器（第33行），并最后（第36行）调用p->trapframe->kernel_trap所指向的smode_trap_handler()函数。
+从以上代码我们可以看到，trap的入口处理函数首先将“进程”（即我们的obj/app_helloworld的运行现场）进行保存（第24行）；接下来将a0寄存器中的系统调用号保存到内核堆栈（第27--28行），再将p->trapframe->kernel_sp指向的为应用进程分配的内核栈设置到sp寄存器（第31行，即切换堆栈，而不使用PKE内核自己的栈，**这里请读者思考为何要这样安排？**），后续的执行将使用应用进程所附带的内核栈来保存执行的上下文，如函数调用、临时变量这些；最后，将应用进程中的p->trapframe->kernel_trap写入t0寄存器（第34行），并最后（第37行）调用p->trapframe->kernel_trap所指向的smode_trap_handler()函数。
 
 smode_trap_handler()函数的定义在kernel/strap.c文件中，采用C语言编写：
 
-```
- 30 void smode_trap_handler(void) {
- 31   // make sure we are in User mode before entering the trap handling.
- 32   // we will consider other previous case in lab1_3 (interrupt).
- 33   if ((read_csr(sstatus) & SSTATUS_SPP) != 0) panic("usertrap: not from user mode");
- 34
- 35   assert(current);
- 36   // save user process counter.
- 37   current->trapframe->epc = read_csr(sepc);
- 38
- 39   // if the cause of trap is syscall from user application
- 40   if (read_csr(scause) == CAUSE_USER_ECALL) {
- 41     handle_syscall(current->trapframe);
- 42   } else {
- 43     sprint("smode_trap_handler(): unexpected scause %p\n", read_csr(scause));
- 44     sprint("            sepc=%p stval=%p\n", read_csr(sepc), read_csr(stval));
- 45   }
- 46
- 47   // continue the execution of process. but in lab1_1, we have only one process...
- 48   switch_to(current);
- 49 }
+```c
+ 33 void smode_trap_handler(void) {
+ 34   // make sure we are in User mode before entering the trap handling.
+ 35   // we will consider other previous case in lab1_3 (interrupt).
+ 36   if ((read_csr(sstatus) & SSTATUS_SPP) != 0) panic("usertrap: not from user mode");
+ 37
+ 38   assert(current);
+ 39   // save user process counter.
+ 40   current->trapframe->epc = read_csr(sepc);
+ 41
+ 42   // if the cause of trap is syscall from user application
+ 43   if (read_csr(scause) == CAUSE_USER_ECALL) {
+ 44     handle_syscall(current->trapframe);
+ 45   } else {
+ 46     sprint("smode_trap_handler(): unexpected scause %p\n", read_csr(scause));
+ 47     sprint("            sepc=%p stval=%p\n", read_csr(sepc), read_csr(stval));
+ 48     panic( "unexpected exception happened.\n" );
+ 49   }
+ 50
+ 51   // continue the execution of current process.
+ 52   switch_to(current);
+ 53 }
 ```
 
-该函数首先在第33行，对进入当前特权级模式（S模式）之前的模式进行判断，确保进入前是用户模式（U模式）；接下来在第37行，保存发生系统调用的指令地址；进一步判断（第40--45行的if...else...语句）导致进入当前模式的原因，如果是系统调用的话（read_csr(scause) == CAUSE_USER_ECALL）就执行handle_syscall()函数，但如果是其他原因（对于其他原因的处理，我们将在后续实验中进一步完善）的话，就打印出错信息并推出；最后，在第48行调用switch_to()函数返回当前进程。
+该函数首先在第36行，对进入当前特权级模式（S模式）之前的模式进行判断，确保进入前是用户模式（U模式）；接下来在第40行，保存发生系统调用的指令地址；进一步判断（第43--49行的if...else...语句）导致进入当前模式的原因，如果是系统调用的话（read_csr(scause) == CAUSE_USER_ECALL）就执行handle_syscall()函数，但如果是其他原因（对于其他原因的处理，我们将在后续实验中进一步完善）的话，就打印出错信息并推出；最后，在第52行调用switch_to()函数返回当前进程。
 
 handle_syscall()函数的定义也在kernel/strap.c文件中：
 
-```
+```c
  15 static void handle_syscall(trapframe *tf) {
  16   // tf->epc points to the address that our computer will jump to after the trap handling.
  17   // for a syscall, we should return to the NEXT instruction after its handling.
  18   // in RV64G, each instruction occupies exactly 32 bits (i.e., 4 Bytes)
  19   tf->epc += 4;
  20
- 21   // TODO (lab1_1): remove the panic call below, and use do_syscall (defined in kernel/syscall.c) to
- 22   // accomplish the syscall. return value should be written to a0 register in trapframe (regs.a0)
- 23   panic( "call do_syscall to accomplish the syscall and lab1_1 here.\n" );
- 24
- 25 }
+ 21   // TODO (lab1_1): remove the panic call below, and call do_syscall (defined in
+ 22   // kernel/syscall.c) to conduct real operations of the kernel side for a syscall.
+ 23   // IMPORTANT: return value should be returned to user app, or else, you will encounter
+ 24   // problems in later experiments!
+ 25   panic( "call do_syscall to accomplish the syscall and lab1_1 here.\n" );
+ 26
+ 27 }
 ```
 
-看到第23行，我们就应该明白为什么在make后的直接运行结果中出现`call do_syscall to accomplish the syscall and lab1_1 here.`这行的输出了，那是panic的输出结果。所以为了完成lab1_1，就应该把panic语句删掉，换成对do_syscall()函数的调用！其实完成这个实验非常简单，但需要读者完成以上所述的代码跟踪，了解PKE操作系统内核处理系统调用的流程。
+看到第25行，我们就应该明白为什么在make后的直接运行结果中出现`call do_syscall to accomplish the syscall and lab1_1 here.`这行的输出了，那是panic的输出结果。所以为了完成lab1_1，就应该把panic语句删掉，换成对do_syscall()函数的调用！其实完成这个实验非常简单，但需要读者完成以上所述的代码跟踪，了解PKE操作系统内核处理系统调用的流程。
 
 那么do_syscall()函数是在哪里定义的呢？实际上这个函数在kernel/syscall.c文件中，已经帮大家写好了：
 
-```
- 39 long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, long a7) {
- 40   switch (a0) {
- 41     case SYS_user_print:
- 42       return sys_user_print((const char*)a1, a2);
- 43     case SYS_user_exit:
- 44       return sys_user_exit(a1);
- 45     default:
- 46       panic("Unknown syscall %ld \n", a0);
- 47   }
- 48 }
+```c
+ 38 long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, long a7) {
+ 39   switch (a0) {
+ 40     case SYS_user_print:
+ 41       return sys_user_print((const char*)a1, a2);
+ 42     case SYS_user_exit:
+ 43       return sys_user_exit(a1);
+ 44     default:
+ 45       panic("Unknown syscall %ld \n", a0);
+ 46   }
+ 47 }
 ```
 
 但是，做实验的时候，需要读者思考在handle_syscall()函数中调用do_syscall()函数，后者的参数怎么办？毕竟有8个long类型（因为我们的机器是RV64G，long类型占据8个字节）的参数，另外，do_syscall()函数的返回值怎么处理？毕竟do_syscall()函数有一个long类型的返回值，而这个返回值是要通知应用程序它发出的系统调用是否成功的。
@@ -1060,7 +1057,7 @@ handle_syscall()函数的定义也在kernel/strap.c文件中：
 
 完成以上实验后，就能够获得以下结果输出了：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_helloworld
 In m_start, hartid:0
 HTIF is available!
@@ -1076,9 +1073,9 @@ System is shutting down with exit code 0.
 
 
 
-实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab1_1中所做的工作：
+**实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab1_1中所做的工作**：
 
-```
+```bash
 $ git commit -a -m "my work on lab1_1 is done."
 ```
 
@@ -1094,7 +1091,7 @@ $ git commit -a -m "my work on lab1_1 is done."
 
 - user/app_illegal_instruction.c
 
-```
+```c
   1 /*
   2  * Below is the given application for lab1_2.
   3  * This app attempts to issue M-mode instruction in U-mode, and consequently raises an exception.
@@ -1114,9 +1111,9 @@ $ git commit -a -m "my work on lab1_1 is done."
 
 （在用户U模式下执行的）应用企图执行RISC-V的特权指令csrw sscratch, 0。该指令会修改S模式的栈指针，如果允许该指令的执行，执行的结果可能会导致系统崩溃。
 
-- 切换到lab1_2、继承lab1_1中所做修改，并make后的直接运行结果：
+- （先提交lab1_1的答案，然后）切换到lab1_2、继承lab1_1中所做修改，并make后的直接运行结果：
 
-```
+```bash
 //切换到lab1_2
 $ git checkout lab1_2_exception
 
@@ -1151,7 +1148,7 @@ System is shutting down with exit code -1.
 
 如输出所提示的那样，通过调用handle_illegal_instruction函数完成异常指令处理，阻止app_illegal_instruction的执行。
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_illegal_instruction
 In m_start, hartid:0
 HTIF is available!
@@ -1175,7 +1172,7 @@ lab1_2实验需要读者了解和掌握操作系统中异常（exception）的�
 
 通过[3.1.5](#subsec_booting)节的阅读，我们知道PKE操作系统内核在启动时会将部分异常和中断“代理”给S模式处理，但是它是否将CAUSE_ILLEGAL_INSTRUCTION这类异常也进行了代理呢？这就要研究m_start()函数在执行delegate_traps()函数时设置的代理规则了，我们先查看delegate_traps()函数的代码，在kernel/machine/minit.c文件中找到它对应的代码：
 
-```
+```c
  51 static void delegate_traps() {
  52   if (!supports_extension('S')) {
  53     // confirm that our processor supports supervisor mode. abort if not.
@@ -1197,7 +1194,7 @@ lab1_2实验需要读者了解和掌握操作系统中异常（exception）的�
 
 在第58--61行的代码中，delegate_traps()函数确实将部分异常代理给了S模式处理，但是里面并没有我们关心的CAUSE_ILLEGAL_INSTRUCTION异常，这说明该异常的处理还是交给M模式来处理（实际上，对于spike模拟的RISC-V平台而言，CAUSE_ILLEGAL_INSTRUCTION异常*必须*在M态处理）！所以，我们需要了解M模式的trap处理入口，以便继续跟踪其后的处理过程。M模式的trap处理入口在kernel/machine/mtrap_vector.S文件中（PKE操作系统内核在启动时（kernel/machine/minit.c文件的第125行`write_csr(mtvec, (uint64)mtrapvec);`）已经将M模式的中断处理入口指向了该函数）：
 
-```
+```assembly
   8 mtrapvec:
   9     # swap a0 and mscratch
  10     # so that a0 points to interrupt frame
@@ -1234,7 +1231,7 @@ lab1_2实验需要读者了解和掌握操作系统中异常（exception）的�
 
 接下来，mtrapvec汇编函数在第21--26行切换栈到stack0（即PKE内核启动时用过的栈），并在31行调用handle_mtrap()函数。handle_mtrap()函数在kernel/machine/mtrap.c文件中定义：
 
-```
+```c
  20 void handle_mtrap() {
  21   uint64 mcause = read_csr(mcause);
  22   switch (mcause) {
@@ -1247,9 +1244,9 @@ lab1_2实验需要读者了解和掌握操作系统中异常（exception）的�
  29       handle_store_access_fault();
  30       break;
  31     case CAUSE_ILLEGAL_INSTRUCTION:
- 32       //TODO (lab1_2): call handle_illegal_instruction to implement illegal instruction interception
- 33       // and finish lab1_2
- 34       panic( "call handle_illegal_instruction to accomplish illegal instruction interception of lab1_2.\n" );
+ 32       // TODO (lab1_2): call handle_illegal_instruction to implement illegal instruction
+ 33       // interception, and finish lab1_2.
+ 34       panic( "call handle_illegal_instruction to accomplish illegal instruction interception for lab1_2.\n" );
  35
  36       break;
  37     case CAUSE_MISALIGNED_LOAD:
@@ -1262,14 +1259,21 @@ lab1_2实验需要读者了解和掌握操作系统中异常（exception）的�
  44     default:
  45       sprint("machine trap(): unexpected mscause %p\n", mcause);
  46       sprint("            mepc=%p mtval=%p\n", read_csr(mepc), read_csr(mtval));
- 47       break;
- 48   }
- 49 }
+ 47       panic( "unexpected exception happened in M-mode.\n" );
+ 48       break;
+ 49   }
+ 50 }
 ```
 
 可以看到，handle_mtrap()函数对在M态处理的多项异常都进行了处理，处理的方式几乎全部是调用panic函数，让（模拟）机器停机。对于CAUSE_ILLEGAL_INSTRUCTION尚未处理，所以这里你可以将第34行的panic函数替换成对handle_illegal_instruction()函数的调用，已完成lab1_2。
 
 需要注意的是，因为对于PKE而言，它只需要一次执行一个应用程序即可，所以我们可以调用panic让（模拟）RISC-V机器停机，但是如果是实际的硬件机器场景，就要想办法将发生被handle_mtrap()函数所处理异常的应用进程销毁掉。
+
+**实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab1_2中所做的工作**：
+
+```bash
+$ git commit -a -m "my work on lab1_2 is done."
+```
 
 <a name="irq"></a>
 
@@ -1280,35 +1284,36 @@ lab1_2实验需要读者了解和掌握操作系统中异常（exception）的�
 #### **给定应用**
 - user/app_long_loop.c
 
-```
+```c
   1 /*
   2  * Below is the given application for lab1_3.
-  3  * This app performs a long loop, during which, timers are generated and pop messages to our screen.
-  4  */
-  5
-  6 #include "user_lib.h"
-  7 #include "util/types.h"
-  8
-  9 int main(void) {
- 10   printu("Hello world!\n");
- 11   int i;
- 12   for (i = 0; i < 100000000; ++i) {
- 13     if (i % 5000000 == 0) printu("wait %d\n", i);
- 14   }
- 15
- 16   exit(0);
- 17
- 18   return 0;
- 19 }
+  3  * This app performs a long loop, during which, timers are
+  4  * generated and pop messages to our screen.
+  5  */
+  6
+  7 #include "user_lib.h"
+  8 #include "util/types.h"
+  9
+ 10 int main(void) {
+ 11   printu("Hello world!\n");
+ 12   int i;
+ 13   for (i = 0; i < 100000000; ++i) {
+ 14     if (i % 5000000 == 0) printu("wait %d\n", i);
+ 15   }
+ 16
+ 17   exit(0);
+ 18
+ 19   return 0;
+ 20 }
 ```
 
 应用的程序逻辑包含一个长度为100000000次的循环，循环每次将整型变量i加一，当i的值是5000000的整数倍时，输出"wait i的值\n"。这个循环程序在我们的（模拟）RISC-V平台上运行，显然将消耗一定时间（实际上，你也可以把这个程序改成死循环，但并不会死机！**请读者做完lab1_3的实验后思考为什么死循环并不会导致死机**。）。
 
 
 
-- 切换到lab1_3、继承lab1_2中所做修改，并make后的直接运行结果：
+- （先提交lab1_2的答案，然后）切换到lab1_3、继承lab1_2中所做修改，并make后的直接运行结果：
 
-```
+```bash
 //切换到lab1_3
 $ git checkout lab1_3_irq
 
@@ -1349,7 +1354,7 @@ System is shutting down with exit code -1.
 
 实验完成后的运行结果：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_long_loop
 In m_start, hartid:0
 HTIF is available!
@@ -1399,21 +1404,21 @@ System is shutting down with exit code 0.
 
 - 在m_start函数（也就是机器模式的初始化函数）中新增了timerinit()函数，后者的函数定义在kernel/machine/minit.c文件：
 
-```
- 92 void timerinit(uintptr_t hartid) {
- 93   // fire timer irq after TIMER_INTERVAL from now.
- 94   *(uint64*)CLINT_MTIMECMP(hartid) = *(uint64*)CLINT_MTIME + TIMER_INTERVAL;
- 95
- 96   // enable machine-mode timer irq in MIE (Machine Interrupt Enable) csr.
- 97   write_csr(mie, read_csr(mie) | MIE_MTIE);
- 98 }
+```c
+ 72 void timerinit(uintptr_t hartid) {
+ 73   // fire timer irq after TIMER_INTERVAL from now.
+ 74   *(uint64*)CLINT_MTIMECMP(hartid) = *(uint64*)CLINT_MTIME + TIMER_INTERVAL;
+ 75
+ 76   // enable machine-mode timer irq in MIE (Machine Interrupt Enable) csr.
+ 77   write_csr(mie, read_csr(mie) | MIE_MTIE);
+ 78 }
 ```
 
-该函数首先在94行设置了下一次timer触发的时间，即当前时间的TIMER_INTERVAL（即1000000周期后，见kernel/config.h中的定义）之后。另外，在97行设置了MIE（Machine Interrupt Enable，见本书的第一章的[1.3节](chapter1_riscv.md#machinestates)和[1.4节](chapter1_riscv.md#traps)）寄存器中的MIE_MTIE位，即允许我们的（模拟）RISC-V机器在M模式处理timer中断。
+该函数首先在74行设置了下一次timer触发的时间，即当前时间的TIMER_INTERVAL（即1000000周期后，见kernel/config.h中的定义）之后。另外，在77行设置了MIE（Machine Interrupt Enable，见本书的第一章的[1.3节](chapter1_riscv.md#machinestates)和[1.4节](chapter1_riscv.md#traps)）寄存器中的MIE_MTIE位，即允许我们的（模拟）RISC-V机器在M模式处理timer中断。
 
 时钟中断触发后，kernel/machine/mtrap_vector.S文件中的mtrapvec函数将被调用：
 
-```
+```assembly
   8 mtrapvec:
   9     # swap a0 and mscratch
  10     # so that a0 points to interrupt frame
@@ -1448,7 +1453,7 @@ System is shutting down with exit code 0.
 
 和lab1_2一样，最终将进入handle_mtrap函数继续处理。handle_mtrap函数将通过对mcause寄存器的值进行判断，确认是时钟中断（CAUSE_MTIMER）后，将调用handle_timer()函数进行进一步处理：
 
-```
+```c
  17 static void handle_timer() {
  18   int cpuid = 0;
  19   // setup the timer fired at next time (TIMER_INTERVAL from now)
@@ -1476,9 +1481,9 @@ System is shutting down with exit code 0.
  41       handle_store_access_fault();
  42       break;
  43     case CAUSE_ILLEGAL_INSTRUCTION:
- 44       //TODO (lab1_2): call handle_illegal_instruction to implement illegal instruction interception
- 45       // and finish lab1_2
- 46       panic( "call handle_illegal_instruction to accomplish illegal instruction interception of lab1_2.\n" );
+ 44       // TODO (lab1_2): call handle_illegal_instruction to implement illegal instruction
+ 45       // interception, and finish lab1_2.
+ 46       panic( "call handle_illegal_instruction to accomplish illegal instruction interception for lab1_2.\n" );
  47
  48       break;
  49     case CAUSE_MISALIGNED_LOAD:
@@ -1491,9 +1496,10 @@ System is shutting down with exit code 0.
  56     default:
  57       sprint("machine trap(): unexpected mscause %p\n", mcause);
  58       sprint("            mepc=%p mtval=%p\n", read_csr(mepc), read_csr(mtval));
- 59       break;
- 60   }
- 61 }
+ 59       panic( "unexpected exception happened in M-mode.\n" );
+ 60       break;
+ 61   }
+ 62 }
 ```
 
 而handle_timer()函数会（在第20行）先设置下一次timer（再次）触发的时间为当前时间+TIMER_INTERVAL，并在23行对SIP（Supervisor Interrupt Pending，即S模式的中断等待寄存器）寄存器进行设置，将其中的SIP_SSIP位进行设置，完成后返回。至此，时钟中断在M态的处理就结束了，剩下的动作交给S态继续处理。而handle_timer()在第23行的动作，会导致PKE操作系统内核在S模式收到一个来自M态的时钟中断请求（CAUSE_MTIMER_S_TRAP）。
@@ -1502,50 +1508,57 @@ System is shutting down with exit code 0.
 
 接下来，我们继续讨论时钟中断在S态的处理。我们直接来到S态的C处理函数，即位于kernel/strap.c中的 smode_trap_handler函数：
 
-```
- 42 void smode_trap_handler(void) {
- 43   // make sure we are in User mode before entering the trap handling.
- 44   // we will consider other previous case in lab1_3 (interrupt).
- 45   if ((read_csr(sstatus) & SSTATUS_SPP) != 0) panic("usertrap: not from user mode");
- 46
- 47   assert(current);
- 48   // save user process counter.
- 49   current->trapframe->epc = read_csr(sepc);
- 50
- 51   // if the cause of trap is syscall from user application
- 52   uint64 cause = read_csr(scause);
+```c
+ 45 void smode_trap_handler(void) {
+ 46   // make sure we are in User mode before entering the trap handling.
+ 47   // we will consider other previous case in lab1_3 (interrupt).
+ 48   if ((read_csr(sstatus) & SSTATUS_SPP) != 0) panic("usertrap: not from user mode");
+ 49
+ 50   assert(current);
+ 51   // save user process counter.
+ 52   current->trapframe->epc = read_csr(sepc);
  53
- 54   if (cause == CAUSE_USER_ECALL) {
- 55     handle_syscall(current->trapframe);
- 56   } else if (cause == CAUSE_MTIMER_S_TRAP) {  //soft trap generated by timer interrupt in M mode
- 57     handle_mtimer_trap();
- 58   } else {
- 59     sprint("smode_trap_handler(): unexpected scause %p\n", read_csr(scause));
- 60     sprint("            sepc=%p stval=%p\n", read_csr(sepc), read_csr(stval));
- 61   }
- 62
- 63   // continue the execution of process. but in lab1_1, we have only one process...
- 64   switch_to(current);
- 65 }
+ 54   // if the cause of trap is syscall from user application
+ 55   uint64 cause = read_csr(scause);
+ 56
+ 57   if (cause == CAUSE_USER_ECALL) {
+ 58     handle_syscall(current->trapframe);
+ 59   } else if (cause == CAUSE_MTIMER_S_TRAP) {  //soft trap generated by timer interrupt in M mode
+ 60     handle_mtimer_trap();
+ 61   } else {
+ 62     sprint("smode_trap_handler(): unexpected scause %p\n", read_csr(scause));
+ 63     sprint("            sepc=%p stval=%p\n", read_csr(sepc), read_csr(stval));
+ 64     panic( "unexpected exception happened.\n" );
+ 65   }
+ 66
+ 67   // continue the execution of current process.
+ 68   switch_to(current);
+ 69 }
 ```
 
 我们看到，该函数首先读取scause寄存器的内容，如果内容等于CAUSE_MTIMER_S_TRAP的话，说明是M态传递上来的时钟中断动作，就调用handle_mtimer_trap()函数进行处理，而handle_mtimer_trap()函数的定义为:
 
-```
- 29 static uint64 g_ticks = 0;
- 30 void handle_mtimer_trap() {
- 31   sprint("Ticks %d\n", g_ticks);
- 32   //TODO (lab1_3): increase g_ticks to record this "tick",
- 33   // and then clear the "SIP" field in sip register.
- 34   // hint: use write_csr to disable the SIP_SSIP bit in sip.
- 35   panic( "lab1_3: increase g_ticks by one, and clear SIP field in sip register.\n" );
- 36
- 37 }
+```c
+ 31 static uint64 g_ticks = 0;
+ 32 void handle_mtimer_trap() {
+ 33   sprint("Ticks %d\n", g_ticks);
+ 34   // TODO (lab1_3): increase g_ticks to record this "tick", and then clear the "SIP"
+ 35   // field in sip register.
+ 36   // hint: use write_csr to disable the SIP_SSIP bit in sip.
+ 37   panic( "lab1_3: increase g_ticks by one, and clear SIP field in sip register.\n" );
+ 38
+ 39 }
 ```
 
 至此，我们就知道为什么会在之前看到`lab1_3: increase g_ticks by one, and clear SIP field in sip register.`这样的输出了，显然这是因为handle_mtimer_trap()并未完成。
 
-那么handle_mtimer_trap()需要完成哪些“后续动作”呢？首先，我们看到在该函数上面定义了一个全局变量g_ticks，用它来对时钟中断的次数进行计数，而第31行会输出该计数。为了确保我们的系统持续正常运行，该计数应每次都会完成加一操作。所以，handle_mtimer_trap()首先需要对g_ticks进行加一；其次，由于处理完中断后，SIP（Supervisor Interrupt Pending，即S模式的中断等待寄存器）寄存器中的SIP_SSIP位仍然为1（由M态的中断处理函数设置），如果该位持续为1的话会导致我们的模拟RISC-V机器始终处于中断状态。所以，handle_mtimer_trap()还需要对SIP的SIP_SSIP位清零，以保证下次再发生时钟中断时，M态的函数将该位置一会导致S模式的下一次中断。
+那么handle_mtimer_trap()需要完成哪些“后续动作”呢？首先，我们看到在该函数上面定义了一个全局变量g_ticks，用它来对时钟中断的次数进行计数，而第33行会输出该计数。为了确保我们的系统持续正常运行，该计数应每次都会完成加一操作。所以，handle_mtimer_trap()首先需要对g_ticks进行加一；其次，由于处理完中断后，SIP（Supervisor Interrupt Pending，即S模式的中断等待寄存器）寄存器中的SIP_SSIP位仍然为1（由M态的中断处理函数设置），如果该位持续为1的话会导致我们的模拟RISC-V机器始终处于中断状态。所以，handle_mtimer_trap()还需要对SIP的SIP_SSIP位清零，以保证下次再发生时钟中断时，M态的函数将该位置一会导致S模式的下一次中断。
+
+**实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab1_3中所做的工作**：
+
+```bash
+$ git commit -a -m "my work on lab1_3 is done."
+```
 
 <a name="lab1_challenge1_backtrace"></a>
 
@@ -1589,7 +1602,7 @@ main -> f1 -> f2 -> f3 -> f4 -> f5 -> f6 -> f7 -> f8
 
 print_backtrace(7)的作用是将以上用户程序的函数调用关系，从最后的f8向上打印7层，预期的输出为：
 
-```
+```bash
 In m_start, hartid:0
 HTIF is available!
 (Emulated) memory size: 2048 MB
@@ -1615,7 +1628,7 @@ System is shutting down with exit code 0.
 
 本实验为挑战实验，基础代码将继承和使用lab1_3完成后的代码：
 
-- 切换到lab1_3、继承lab1_2中所做修改：
+- （先提交lab1_3的答案，然后）切换到lab1_challenge1_backtrace、继承lab1_3中所做修改：
 
 ```bash
 //切换到lab1_challenge1_backtrace
@@ -1625,7 +1638,7 @@ $ git checkout lab1_challenge1_backtrace
 $ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
 ```
 
-注意：**不同于基础实验，挑战实验的基础代码具有更大的不完整性，可能无法直接通过构造过程。**例如，由于以上的用户代码中print_backtrace()系统调用并未实现，所以构造时就会报错。同样，不同于基础实验，我们在代码中也并未专门地哪些地方的代码需要填写，哪些地方的代码无须填写。这样，我们留个读者更大的“想象空间”。
+注意：**不同于基础实验，挑战实验的基础代码具有更大的不完整性，可能无法直接通过构造过程。**例如，由于以上的用户代码中print_backtrace()系统调用并未实现，所以构造时就会报错。同样，不同于基础实验，我们在代码中也并未专门地哪些地方的代码需要填写，哪些地方的代码无须填写。这样，我们留给读者更大的“想象空间”。
 
 - 本实验的具体要求为：
 
@@ -1654,6 +1667,10 @@ $ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
 
 **注意：完成实验内容后，请读者另外编写应用，通过调用print_backtrace()函数，并带入不同的深度参数，对自己的实现进行检测。**
 
+**另外，后续的基础实验代码并不依赖挑战实验，所以读者可自行决定是否将自己的工作提交到本地代码仓库中（当然，提交到本地仓库是个好习惯，至少能保存自己的“作品”）。**
+
+
+
 <a name="lab1_challenge2_errorline"></a>
 
 # 3.6 lab1_challenge2 挑战二：打印异常代码行
@@ -1662,38 +1679,41 @@ $ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
 
 #### **给定应用**
 
-- user/app_print_errorline.c
+- user/app_errorline.c（和lab1_2的应用一致）
 
 ```c
-  1 /*                                                                          
-  2  * Below is the given application for lab1_challenge2_errorline.
-  3  * This app performs a misaligned memory load operation.
+  1 /*                                                                             
+  2  * Below is the given application for lab1_challenge2 (same as lab1_2).
+  3  * This app attempts to issue M-mode instruction in U-mode, and consequently raises an exception.
   4  */
   5 
   6 #include "user_lib.h"
   7 #include "util/types.h"
   8 
   9 int main(void) {
- 10     // load a dword(8 bytes) from address 0x80000001,
- 11     // this will throw a load address misaligned exception.
- 12     asm volatile ("li s2, 0x80000001\nld s2, (s2)");
- 13     exit(0); return 0;
- 14 }
+ 10   printu("Going to hack the system by running privilege instructions.\n");
+ 11   // we are now in U(user)-mode, but the "csrw" instruction requires M-mode privilege.
+ 12   // Attempting to execute such instruction will raise illegal instruction exception.
+ 13   asm volatile("csrw sscratch, 0");
+ 14   exit(0);
+ 15 }
+ 16 
 ```
 
-以上程序在地址0x80000001处读取一个8字节的双字，按照spike的要求，读取双字时地址需要按8字节对齐，因此此处会触发Load address misaligned异常，你的任务是**修改内核（包括machine文件夹下）的代码，使得用户程序在发生异常时，内核能够输出触发异常的用户程序的源文件名和对应代码行**，如上面的应用预期输出如下：
+以上程序试图在用户态读取在内核态才能读取的寄存器sscratch，因此此处会触发illegal instruction异常，你的任务是**修改内核（包括machine文件夹下）的代码，使得用户程序在发生异常时，内核能够输出触发异常的用户程序的源文件名和对应代码行**，如上面的应用预期输出如下：
 
-```
+```bash
 In m_start, hartid:0
 HTIF is available!
 (Emulated) memory size: 2048 MB
 Enter supervisor mode...
-Application: obj/app_long_loop
-Application program entry point (virtual address): 0x000000008100007e
-Switching to user mode...
-Runtime error at user/app_long_loop.c:12
-    asm volatile ("li s2, 0x80000001\nld s2, (s2)");
-Misaligned Load!
+Application: obj/app_errorline
+Application program entry point (virtual address): 0x0000000081000000
+Switch to user mode...
+Going to hack the system by running privilege instructions.
+Runtime error at user/app_errorline.c:13
+  asm volatile("csrw sscratch, 0");
+Illegal instruction!
 System is shutting down with exit code -1.
 ```
 
@@ -1703,22 +1723,24 @@ System is shutting down with exit code -1.
 
 本实验为挑战实验，基础代码将继承和使用lab1_3完成后的代码：
 
-- 切换到lab1_3、继承lab1_2中所做修改：
+- （先提交lab1_3的答案，然后）切换到lab1_challenge2_errorline、继承**lab1_3**（注意，不是继承lab1_challenge1_backtrace！**PKE的挑战实验之间无继承关联**）中所做修改：
 
 ```bash
 //切换到lab1_challenge2_errorline
 $ git checkout lab1_challenge2_errorline
 
 //继承lab1_3以及之前的答案
-$ git merge lab1_3_irq -m "continue to work on lab1_challenge2"
+$ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
 ```
 
 注意：**不同于基础实验，挑战实验的基础代码具有更大的不完整性，可能无法直接通过构造过程。**同样，不同于基础实验，我们在代码中也并未专门地哪些地方的代码需要填写，哪些地方的代码无须填写。这样，我们留给读者更大的“想象空间”。
 
 - 本实验的具体要求为：通过修改PKE内核（包括machine文件夹下的代码），使得用户程序在发生异常时，内核能够输出触发异常的用户程序的源文件名和对应代码行。
-
-- 注意：虽然在示例的app_print_errorline.c中只触发了读取内存地址不对齐异常，但最终测试时你的内核也应能够对其他会导致panic的异常和其他源文件输出正确的结果。
+- 注意：虽然在示例的app_errorline.c中只触发了非法指令异常，但最终测试时你的内核也应能够对其他会导致panic的异常和其他源文件输出正确的结果。
 - 文件名规范：需要包含路径，如果是用户源程序发生的错误，路径为相对路径，如果是调用的标准库内发生的错误，路径为绝对路径。
+- 为了降低挑战的难度，本实验在elf.c中给出了debug_line段的解析函数make_addr_line。这个函数接受三个参数，ctx为elf文件的上下文指针，这个可以参考文件中的其他函数；debug_line为指向.debug_line段数据的指针，你需要读取elf文件中名为.debug_line的段保存到缓冲区中，然后将缓冲区指针传入这个参数；length为.debug_line段数据的长度。
+- 函数调用结束后，process结构体的dir、file、line三个指针会各指向一个数组，dir数组存储所有代码文件的文件夹路径字符串指针，如/home/abc/bcd的文件夹路径为/home/abc，本项目user文件夹下的app_errorline.c文件夹路径为user；file数组存储所有代码文件的文件名字符串指针以及其文件夹路径在dir数组中的索引；line数组存储所有指令地址，代码行号，文件名在file数组中的索引三者的映射关系。如某文件第3行为a = 0，被编译成地址为0x1234处的汇编代码li ax, 0和0x1238处的汇编代码sd 0(s0), ax。那么file数组中就包含两项，addr属性分别为0x1234和0x1238，line属性为3，file属性为“某文件”的文件名在file数组中的索引。
+- 注意：dir、file、line三个数组会依次存储在debug_line数据缓冲区之后，dir数组和file数组的大小为64。所以如果你用静态数组来存储debug_line段数据，那么这个数组必须足够大；或者你也可以把debug_line直接放在程序所有需映射的段数据之后，这样可以保证有足够大的动态空间。
 
 <a name="lab1_challenge2_guide"></a>
 
@@ -1727,7 +1749,7 @@ $ git merge lab1_3_irq -m "continue to work on lab1_challenge2"
 * 为完成该挑战，需要利用用户程序编译时产生的**调试信息**，目前最广泛使用的调试信息格式是DWARF，可以参考[这里](https://wiki.osdev.org/DWARF)了解其格式，该网站的参考文献中也给出了DWARF的完整文档地址，必要时可参考。
 * 你对内核代码的修改可能包含以下内容：
   * 修改读取elf文件的代码，找到包含调试信息的段，将其内容保存起来（可以保存在用户程序的地址空间中）
-  * 对调试信息进行解析，构造指令地址-源代码行号-源代码文件名的对应表，注意，连续行号对应的不一定是连续的地址，因为一条源代码可以对应多条指令
+  * 在适当的位置调用debug_line段解析函数，对调试信息进行解析，构造指令地址-源代码行号-源代码文件名的对应表，注意，连续行号对应的不一定是连续的地址，因为一条源代码可以对应多条指令。
   * 在异常中断处理函数中，通过相应寄存器找到触发异常的指令地址，然后在上述表中查找地址对应的源代码行号和文件名输出
 
-**注意：完成实验内容后，请读者另外编写应用，触发不同异常，对自己的实现进行检测。**
+**另外，后续的基础实验代码并不依赖挑战实验，所以读者可自行决定是否将自己的工作提交到本地代码仓库中（当然，提交到本地仓库是个好习惯，至少能保存自己的“作品”）。**
