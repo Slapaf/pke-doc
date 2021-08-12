@@ -978,7 +978,7 @@ $ git commit -a -m "my work on lab3_3 is done."
 
 <a name="lab3_challenge1_wait"></a>
 
-# 5.5 lab3_challenge1 挑战一：进程等待和数据段复制
+## 5.5 lab3_challenge1 挑战一：进程等待和数据段复制（难度：&#9733;&#9733;&#9734;&#9734;&#9734;）
 
 <a name="lab3_challenge1_app"></a>
 
@@ -1114,7 +1114,7 @@ $ git merge lab3_3_rrsched -m "continue to work on lab3_challenge1"
 
 <a name="lab3_challenge2_semaphore"></a>
 
-# 5.6 lab3_challenge2 挑战二：实现信号量
+## 5.6 lab3_challenge2 挑战二：实现信号量（难度：&#9733;&#9733;&#9733;&#9734;&#9734;）
 
 <a name="lab3_challenge2_app"></a>
 
