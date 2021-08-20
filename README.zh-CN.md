@@ -41,13 +41,16 @@
  - [5.1 实验3的基础知识](chapter5_process.md#fundamental)  
  - [5.2 lab3_1 进程创建](chapter5_process.md#lab3_1_naive_fork)  
  - [5.3 lab3_2 进程yield](chapter5_process.md#lab3_2_yield)  
- - [5.4 lab3_3 循环轮转调度](chapter5_process.md#ilab3_3_rrsched)  
+ - [5.4 lab3_3 循环轮转调度](chapter5_process.md#lab3_3_rrsched)  
  - [5.5 lab3_challenge1 进程等待和数据段复制（难度：&#9733;&#9733;&#9734;&#9734;&#9734;）](chapter5_process.md#lab3_challenge1_wait) 
  - [5.6 lab3_challenge2 实现信号量（难度：&#9733;&#9733;&#9733;&#9734;&#9734;）](chapter5_process.md#lab3_challenge2_semaphore) 
 
-第六章. 实验4：设备管理
+[第六章. 实验4：设备管理](chapter6_device.md)
 
-
+ - [6.1 实验3的基础知识](chapter6_device.md#fundamental)  
+ - [6.2 lab3_1 轮询方式](chapter6_device.md#polling)  
+ - [6.3 lab3_2 中断方式](chapter6_device.md#PLIC)  
+ - [6.4 lab3_3 主机设备访问](chapter6_device.md#hostdevice)  
 
 第七章. 实验5：文件系统
 
