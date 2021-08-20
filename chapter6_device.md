@@ -1,4 +1,4 @@
-# 第六章．实验4：设备管理
+# 第六章．实验4：设备管理（基于[RISCV-on-PYNQ](https://gitee.com/hustos/fpga-pynq)）
 
 
 ### 目录  

@@ -45,7 +45,7 @@
  - [5.5 lab3_challenge1 进程等待和数据段复制（难度：&#9733;&#9733;&#9734;&#9734;&#9734;）](chapter5_process.md#lab3_challenge1_wait) 
  - [5.6 lab3_challenge2 实现信号量（难度：&#9733;&#9733;&#9733;&#9734;&#9734;）](chapter5_process.md#lab3_challenge2_semaphore) 
 
-[第六章. 实验4：设备管理](chapter6_device.md)
+[第六章. 实验4：设备管理（基于RISCV-on-PYNQ）](chapter6_device.md)
 
  - [6.1 实验4的基础知识](chapter6_device.md#fundamental)  
  - [6.2 lab3_1 轮询方式](chapter6_device.md#polling)  
