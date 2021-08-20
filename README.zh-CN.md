@@ -47,7 +47,7 @@
 
 [第六章. 实验4：设备管理](chapter6_device.md)
 
- - [6.1 实验3的基础知识](chapter6_device.md#fundamental)  
+ - [6.1 实验4的基础知识](chapter6_device.md#fundamental)  
  - [6.2 lab3_1 轮询方式](chapter6_device.md#polling)  
  - [6.3 lab3_2 中断方式](chapter6_device.md#PLIC)  
  - [6.4 lab3_3 主机设备访问](chapter6_device.md#hostdevice)  
