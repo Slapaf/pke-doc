@@ -155,7 +155,7 @@ PKE实验将提供基于华为openEuler操作系统的开发方法，*具体的�
 
 （克隆代码仓库）
 
-```
+```bash
 `$ git clone https://gitee.com/hustos/riscv-pke.git
 Cloning into 'riscv-pke-prerelease'...
 remote: Enumerating objects: 195, done.
@@ -246,7 +246,7 @@ Resolving deltas: 100% (107/107), done.`
 
 对于Ubuntu/WSL/openEuler用户（对于头歌用户，可以通过选择“命令行”标签，进入shell环境、进入提示的代码路径，开始构造过程），可以在代码的根目录（进入riscv-pke-prerelease子目录后）输入以下构造命令，应看到如下输出：
 
-```
+```bash
 $ make
 compiling util/snprintf.c
 compiling util/string.c
@@ -281,7 +281,7 @@ User app has been built into "obj/app_helloworld"
 
 这时，我们可以尝试借助riscv-pke内核运行app_helloworld的“Hello world!”程序：
 
-```
+```bash
 $ spike ./obj/riscv-pke ./obj/app_helloworld
 In m_start, hartid:0
 HTIF is available!
