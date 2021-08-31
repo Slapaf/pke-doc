@@ -3,10 +3,12 @@
 
 ### 目录  
 - [6.1 实验4的基础知识](#fundamental)  
-  - [6.1.1  内存映射I/O(MMIO)](#subsec_MMIO) 
-  - [6.1.2  轮询I/O控制方式](#subsec_polling)
-  - [6.1.3  中断驱动I/O控制方式](#subsec_plic)  
-  - [6.1.4  设备树](#subsec_device_tree)  
+  - [6.1.1  pynq开发板介绍](#subsec_pynq)
+  - [6.1.2  设备树](#subsec_device_tree)  
+  - [6.1.3  内存映射I/O(MMIO)](#subsec_MMIO) 
+  - [6.1.4  轮询I/O控制方式](#subsec_polling)
+  - [6.1.5  中断驱动I/O控制方式](#subsec_plic)  
+  - [6.1.6  设备文件](#subsec_file)
 - [6.2 lab4_1 POLL](#polling) 
   - [给定应用](#lab4_1_app)
   - [实验内容](#lab4_1_content)
@@ -26,23 +28,43 @@
 
 完成前面所有实验后，PKE内核的整体功能已经得到完善。在实验四的设备实验中，我们将结合fpga-pynq板，在rocket chip上增加uart模块和蓝牙模块，并搭载PKE内核，实现蓝牙通信控制智能小车，设计设备管理的相关实验。
 
+<a name="subsec_pynq"></a>
+
+### 6.1.1 pynq开发板介绍
+
+本实验中，我们所使用的pynq-z2开发板上搭载两块芯片，一块为Arm架构32位芯片，称为PS端，我们能在上面运行Ubuntu；另一块为FPGA可编程芯片，称为PL端，通过烧录Rocket chip电路，使它能够运行Riscv架构的操作系统，即riscv-pke。
+
+在前面的实验中，Spike模拟器负责执行PKE的机器指令和为PKE分配内存，并通过HTIF协议和PKE进行通信为PKE分配主机的其他资源（如文件等）。在开发板上运行时，执行PKE的机器指令和为PKE分配内存由PL端的电路负责，负责和PKE通信的则是我们在PS端运行的程序riscv-fesvr，PKE借此可以访问PL端的用户程序等文件，这是实验4的基础。
+
+<a name="subsec_device_tree"></a>
+
+### 6.1.2 设备树
+
+设备树（Device Tree）是描述计算机的特定硬件设备信息的数据结构，以便于操作系统的内核可以管理和使用这些硬件，包括CPU，内存，总线和其他一些外设。
+
+硬件的相应信息都会写在`.dts`为后缀的文件中，该文件经过`dtc`程序编译之后会得到`dtb`文件，在传统内核中`dtb`通过`Bootloader`引导程序加载到内核，所以`Bootloader`和内核都需要支持设备树才行。
+
+<img src="pictures/fig6_3.png" alt="fig6_3" style="zoom:130%;" />
+
+在本章节中，dtb文件会和rocketchip一起编译进电路，存放在固定内存区域中。PKE可以访问这个内存区域把该文件解析为设备树结构，设备即通过设备树的方式提供给PKE使用。
+
 <a name="subsec_MMIO"></a>
 
-### 6.1.1 内存映射I/O(MMIO)
+### 6.1.3 内存映射I/O(MMIO)
 
 内存映射(Memory-Mapping I/O)是一种用于设备驱动程序和设备通信的方式，它区别于基于I/O端口控制的Port I/O方式。RICSV指令系统的CPU通常只实现一个物理地址空间，这种情况下，外设I/O端口的物理地址就被映射到CPU中单一的物理地址空间，成为内存的一部分，CPU可以像访问一个内存单元那样访问外设I/O端口，而不需要设立专门的外设I/O指令。
 
 在MMIO中，内存和I/O设备共享同一个地址空间。MMIO是应用得最为广泛的一种IO方法，它使用相同的地址总线来处理内存和I/O设备，I/O设备的内存和寄存器被映射到与之相关联的地址。当CPU访问某个内存地址时，它可能是物理内存，也可以是某个I/O设备的内存。此时，用于访问内存的CPU指令就可以用来访问I/O设备。每个I/O设备监视CPU的地址总线，一旦CPU访问分配给它的地址，它就做出响应，将数据总线连接到需要访问的设备硬件寄存器。为了容纳I/O设备，CPU必须预留给I/O一个地址映射区域。
 
-用户空间程序使用mmap系统调用将IO设备的物理内存地址映射到用户空间的虚拟内存地址上，一旦映射完成，用户空间的一段内存就与IO设备的内存关联起来，当用户访问用户空间的这段内存地址范围时，实际上会转化为对IO设备的访问。
+在本章节中，修改后的RocketChip将蓝牙控制寄存器和小车电机端接到固定的内存地址，因此可以通过对这些地址进行读写控制蓝牙和小车电机。
 
 <a name="subsec_polling"></a>
 
-### 6.1.2  轮询I/O控制方式
+### 6.1.4  轮询I/O控制方式
 
 在实验四中，我们设备管理的主要任务是控制设备与内存的数据传递，具体为从蓝牙设备读取到用户输入的指令字符（或传递数据给蓝牙在手机端进行打印），解析为小车前、后、左、右、停止等动作来传输数据给电机实现对小车的控制。在前两个实验中，我们分别需要对轮询控制方式和中断控制方式进行实现。
 
-首先，程序直接控制方式（又称循环测试方式），每次从外部设备读取一个字的数据到存储器，对于读入的每个字，CPU需要对外设状态进行循环检查，直到确定该数据已经传入I/O数据寄存器中。在轮询的控制方式下，由于CPU的高速性和I/O设备的低速性，导致CPU浪费绝大多数时间处于等待I/O设备完成数据传输的循环测试中，会造成大量资源浪费。
+首先，程序直接控制方式（又称循环测试方式），每次从外部设备读取一个字的数据到存储器，对于读入的每个字，CPU需要对外设状态进行循环检查，直到确定该数据已经传入I/O数据寄存器中。
 
 轮询I/O控制方式流程如图：
 
@@ -50,38 +72,37 @@
 
 <a name="subsec_plic"></a>
 
-### 6.1.3  中断驱动I/O控制方式
+### 6.1.5  中断驱动I/O控制方式
 
-在前一种轮询的控制方式中，由于没有采用中断机制，CPU需要不断测试I/O设备的状态，造成CPU资源的极大浪费。中断驱动的方式是，允许I/O设备主动打断CPU的运行并请求相应的服务，请求I/O的进程首先会进入阻塞状态，PLIC将字符读取操作转化为s态中断进行处理，向进程传递读取的数据后，唤醒进程继续运行。
+在前一种轮询的控制方式中，由于CPU的高速性和I/O设备的低速性，导致CPU浪费绝大多数时间处于等待I/O设备完成数据传输的循环测试中，会造成大量资源浪费。中断驱动的方式是，允许请求I/O的进程在设备工作时进入休眠状态，使CPU能够运行别的进程。直到设备工作完成时，再由设备发出中断，中断处理程序唤醒之前休眠的进程，使其能够接受设备返回的数据继续执行。采用中断驱动的控制方式，在I/O操作过程中，CPU可以执行其他的进程，CPU与设备之间达到了部分并行的工作状态，从而提升了资源利用率。
 
-采用中断驱动的控制方式，在I/O操作过程中，CPU可以执行其他的进程，CPU与设备之间达到了部分并行的工作状态，从而提升了资源利用率。
+Riscv包含三类中断：软中断、时钟中断和外部中断。软中断和时钟中断我们在实验一已经接触过，而设备触发的中断属于外部中断。在实验一中，我们在机器态捕获了时钟中断，然后将其转发成内核态的软中断交由中断处理程序处理；本章则直接通过设置MIDELEG寄存器，利用RISCV的中断委托机制直接将外部中断交由内核态的中断处理程序处理，不用经过机器态的捕获。另外，RISCV架构还指定了PLIC（Priority Level Interrupt Controller）模块管理各级中断，该设备使用MMIO控制，PKE在处理中断之后通过读写指定的内存地址，来获取触发中断的设备的编号以及通知PLIC本次中断是否处理成功。
 
 中断驱动I/O方式流程如图：
 
 <img src="pictures/fig6_2_plic.png" alt="fig6_2" style="zoom:100%;" />
 
-<a name="subsec_device_tree"></a>
+<a name="#subsec_file"></a>
 
-### 6.1.4 设备树
+### 6.1.6 设备文件
 
-设备树（Device Tree）是描述计算机的特定硬件设备信息的数据结构，以便于操作系统的内核可以管理和使用这些硬件，包括CPU或CPU，内存，总线和其他一些外设。
+用户程序访问外部设备通常有两种方式：通过特定系统调用访问和通过设备文件访问。前者即操作系统提供专门的函数控制设备，后者是操作系统把设备指定成一个文件，通过通用的文件的读写函数控制设备。设备文件常用的函数除了open、read、write、close，还有以下几种：
 
-硬件的相应信息都会写在`.dts`为后缀的文件中，`dtc`是编译`dts`的工具，`dtb(Device Tree Blob)`，`dts`经过`dtc`编译之后会得到`dtb`文件，`dtb`通过`Bootloader`引导程序加载到内核。所以`Bootloader`需要支持设备树才行；Kernel也需要加入设备树的支持。
+* ioctl：`int ioctl(int fd, unsigned long request, void *data);`用来设置设备参数。fd是文件描述符；request是一个常数，表示参数类型，不同的类型对应不同的常数；data通常是一个指向要设置的参数的值的指针，参数的值可以是整数，也可以是结构体等；返回值为该函数是否执行成功。如摄像头设备，我们就可以通过该函数设置摄像头的拍摄分辨率、颜色格式等；音频设备我们可以设置采样率、数据格式等。
+* mmap：`void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);`该函数原本的作用是将虚拟地址和文件进行映射，使得读写文件可以像读写内存一样方便，同时也能节省物理内存；但对于有些不支持read/write读写的设备，就必须使用mmap函数将虚拟地址和设备文件映射，才能读写设备的数据。addr参数表示映射的起始虚拟地址，通常填NULL表示由操作系统自己指定；length，prot、flags分别表示映射地址空间的长度、权限和其他参数；fd为文件描述符；offset为文件偏移量，返回值为映射的起始虚拟地址。
 
-<img src="pictures/fig6_3.png" alt="fig6_3" style="zoom:130%;" />
-
-在rocketchip中，设备即通过设备树的方式提供给pke使用。
+在本章节中，将使用PKE通过HTIF协议和PS端的riscv-fesvr进行通信，以读写PS端的摄像头设备文件，进而控制摄像头设备。
 
 <a name="polling"></a>
 
-## 6.2 lab4_1 POLL
+## 6.2 lab4_1 poll
 
 <a name="lab4_1_app"></a>
 
 #### **给定应用**
 - user/app_poll.c
 
-```
+```c
 1	/*
 2	 * Below is the given application for lab4_1.
 3	 * The goal of this app is to control the car via Bluetooth. 
@@ -113,160 +134,24 @@
 
 应用通过轮询的方式从蓝牙端获取指令，实现对小车的控制功能。
 
-- 切换到lab4_1，继承lab3_3及之前实验所做的修改，并make后的直接运行结果：
-
-```
-//切换到lab4_1
-$ git checkout lab4_1_poll
-
-//继承lab3_3以及之前的答案
-$ git merge lab3_3_rrsched -m "continue to work on lab4_1"
-
-//重新构造
-$ make clean; make
-
-//运行构造结果
-In m_start, hartid:0
-HTIF is available!
-(Emulated) memory size: 512 MB
-Enter supervisor mode...
-PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
-free physical memory address: [0x0000000080010000, 0x000000008003ffff] 
-kernel memory manager is initializing ...
-kernel pagetable addr is 0x000000008003e000
-KERN_BASE 0x0000000080000000
-physical address of _etext is: 0x0000000080005000
-kernel page table is on 
-Switching to user mode...
-in alloc_proc. user frame 0x0000000080039000, user stack 0x000000007ffff000, user kstack 0x0000000080038000 
-User application is loading.
-Application: app_poll
-CODE_SEGMENT added at mapped info offset:3
-Application program entry point (virtual address): 0x00000000810000de
-going to insert process 0 to ready queue.
-going to schedule process 0 to run.
-please input the instruction through bluetooth!
-You need to implement the uart_getchar function in lab4_1 here!
-
-System is shutting down with exit code -1.
-
-```
-
-从结果上来看，蓝牙端端口获取用户输入指令的uartgetchar系统调用未完善，所以无法进行控制小车的后续操作。按照提示，我们需要实现蓝牙uart端口的获取和打印字符系统调用，以及传送驱动数据给小车电机的系统调用，实现对小车的控制。
+从直接编译运行结果上来看，蓝牙端端口获取用户输入指令的uartgetchar系统调用未完善，所以无法进行控制小车的后续操作。按照提示，我们需要实现蓝牙uart端口的获取和打印字符系统调用，以及传送驱动数据给小车电机的系统调用，实现对小车的控制。
 
 <a name="lab4_1_content"></a>
 
 #### **实验内容**
 
-如输出提示所表示的那样，需要找到并完成对uartgetchar，uartputchar，gpio_reg_write的调用，并获得以下预期结果：
+如输出提示所表示的那样，需要找到并完成对uart_getchar的调用，完成后进行验证。
 
-```
-In m_start, hartid:0
-HTIF is available!
-(Emulated) memory size: 512 MB
-Enter supervisor mode...
-PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
-free physical memory address: [0x0000000080010000, 0x000000008003ffff] 
-kernel memory manager is initializing ...
-kernel pagetable addr is 0x000000008003e000
-KERN_BASE 0x0000000080000000
-physical address of _etext is: 0x0000000080005000
-kernel page table is on 
-Switching to user mode...
-in alloc_proc. user frame 0x0000000080039000, user stack 0x000000007ffff000, user kstack 0x0000000080038000 
-User application is loading.
-Application: app_poll
-CODE_SEGMENT added at mapped info offset:3
-Application program entry point (virtual address): 0x00000000810000de
-going to insert process 0 to ready queue.
-going to schedule process 0 to run.
-Ticks 0
-please input the instruction through bluetooth!
-Ticks 1
-going to insert process 0 to ready queue.
-going to schedule process 0 to run.
-User exit with code:0.
-no more ready processes, system shutdown now.
-System is shutting down with exit code 0.
-```
+手机端验证：首先将蓝牙模块接入pynq板，接口对应关系为：
 
-<a name="lab4_1_guide"></a>
+| pynq接口 | 蓝牙接口 |
+| -------- | -------- |
+| VCC      | VCC      |
+| GND      | GND      |
+| JA4      | RXD      |
+| JA3      | TXD      |
 
-#### **实验指导**
-
-基于实验lab1_1，你已经了解和掌握操作系统中系统调用机制的实现原理。对于本实验的应用，我们发现user/app_poll.c文件中有三个函数调用：uartgetchar，uartputchar和gpio_reg_write。对代码进行跟踪，我们发现这三个函数都在user/user_lib.c中进行了实现，对应于lab1_1的流程，我们可以在kernel/syscall.h中查看新增的系统调用以及编号：
-
-```
-16	#define SYS_user_uart_putchar (SYS_user_base + 6)
-17	#define SYS_user_uart_getchar (SYS_user_base + 7)
-18	#define SYS_user_gpio_reg_write (SYS_user_base + 8)
-```
-
-继续追踪，我们发现在kernel/syscall.c的do_syscall函数中新增了对应系统调用编号的实现函数，对于新增系统调用，分别有如下函数进行处理：
-
-```
-133	    case SYS_user_uart_putchar:
-134	      sys_user_uart_putchar(a1);return 1;
-135	    case SYS_user_uart_getchar:
-136	      return sys_user_uart_getchar();
-137	    case SYS_user_gpio_reg_write:
-138	      return sys_user_gpio_reg_write(a1);
-```
-
-读者的任务即为在kernel/syscall.c中追踪并完善对应的函数。对于uart的函数，我们给出uart端口的地址映射如图：
-
-<img src="pictures/fig6_3_address.png" alt="fig6_3" style="zoom:80%;" />
-
-我们可以看到配置uart端口的偏移地址为0x60000000，对应写地址为0x60000000，读地址为0x60000004，同时对0x60000008的状态位进行轮询，检测到信号时进行读写操作。
-
-在kernel/syscall.c中找到函数实现空缺，并根据注释完成uart系统调用：
-
-```
-84	//add uart putchar getchar syscall
-85	//
-86	// implement the SYS_user_uart_putchar syscall
-87	//
-88	void sys_user_uart_putchar(uint8 ch) {
-89	    volatile uint32 *status = (void*)(uintptr_t)0x60000008;
-90	    volatile uint32 *tx = (void*)(uintptr_t)0x60000004;
-91	    while (*status & 0x00000008);
-92	    *tx = ch;
-93	}
-94	
-95	ssize_t sys_user_uart_getchar() {
-96	  // TODO (lab4_1): implment the syscall of sys_user_uart_getchar.
-97	  // hint: the functionality of sys_user_uart_getchar is to get data from UART address. therefore,
-98	  // we should let a pointer point, insert it in 
-99	  // the rear of ready queue, and finally, schedule a READY process to run.
-100	    panic( "You have to implement sys_user_uart_getchar to get data from UART using uartgetchar in lab4_1.\n" );
-101	    
-102	}
-103	
-104	
-105	
-106	//car control
-107	ssize_t sys_user_gpio_reg_write(uint8 val) {
-108	    volatile uint32_t *control_reg = (void*)(uintptr_t)0x60001004;
-109	    volatile uint32_t *data_reg = (void*)(uintptr_t)0x60001000;
-110	    //*control_reg = 0;
-111	    *data_reg = (uint32_t)val;
-112	    return 1;
-113	}
-114	
-```
-
-和uart端口读写过程类似，其中电机连接端口gpio数据地址为0x60001000，根据用户程序app_poll中流程，我们需要将uart端口读到的驱动数据传递给电机。
-
-安卓手机端验证：首先将HC-05蓝牙模块接入pynq板，接口对应关系为：
-
-| pynq接口 | HC-05接口 |
-| -------- | --------- |
-| VCC      | VCC       |
-| GND      | GND       |
-| JA4      | RXD       |
-| JA3      | TXD       |
-
-接入时注意对应接口错位正确插入，然后在手机端下载BluetoothSerial，连接hc-05蓝牙模块，使用网线连接pynq板和电脑，打开开发板电源。
+接入时注意对应接口错位正确插入，然后在手机端下载任意一种蓝牙串口通信APP，匹配并连接蓝牙模块。蓝牙的名称通常是“HC-两位数字”。使用网线连接pynq板和电脑，打开开发板电源。
 
 成功连接蓝牙模块后，启动连接：
 
@@ -280,15 +165,66 @@ $ ssh xilinx@192.168.2.99
 $ scp 文件名 xilinx@192.168.2.99:~
 ```
 
-此时便成功进入pynq板环境，可对结果进行验证。
+此时便成功进入pynq板环境。运行：
+
+```
+sudo ./riscv-fesvr riscv-pke app_poll
+```
+
+之后即可在手机上输入控制指令，小车应能根据指令反应。
+
+<a name="lab4_1_guide"></a>
+
+#### **实验指导**
+
+基于实验lab1_1，你已经了解和掌握操作系统中系统调用机制的实现原理。对于本实验的应用，我们发现user/app_poll.c文件中有三个函数调用：uart_getchar，uart_putchar和gpio_reg_write。UART和GPIO分别是两种控制设备的端口协议，但在本实验中它们都可以通过MMIO进行控制。对代码进行跟踪，我们发现这三个函数都在user/user_lib.c中进行了实现，对应于lab1_1的流程，我们可以在kernel/syscall.h中查看新增的系统调用以及编号：
+
+```c
+16	#define SYS_user_uart_putchar (SYS_user_base + 6)
+17	#define SYS_user_uart_getchar (SYS_user_base + 7)
+18	#define SYS_user_gpio_reg_write (SYS_user_base + 8)
+```
+
+继续追踪，我们发现在kernel/syscall.c的do_syscall函数中新增了对应系统调用编号的实现函数，对于新增系统调用，分别有如下函数进行处理：
+
+```c
+133	    case SYS_user_uart_putchar:
+134	      sys_user_uart_putchar(a1);return 1;
+135	    case SYS_user_uart_getchar:
+136	      return sys_user_uart_getchar();
+137	    case SYS_user_gpio_reg_write:
+138	      return sys_user_gpio_reg_write(a1);
+```
+
+读者的任务即为在kernel/syscall.c中追踪并完善sys_user_uart_getchar。对于uart相关的函数，我们给出uart端口的地址映射如图：
+
+<img src="pictures/fig6_3_address.png" alt="fig6_3" style="zoom:80%;" />
+
+我们可以看到配置uart端口的偏移地址为0x60000000，对应写地址为0x60000000，读地址为0x60000004，同时对0x60000008的状态位进行轮询，检测到信号时进行读写操作。
+
+在kernel/syscall.c中找到函数实现空缺，并根据注释完成sys_user_uart_getchar系统调用（由于lab4_2需要对lab4_1完成的代码进行修改，所以这里一并给出了lab4_2的提示）：
+
+```c
+ 95 ssize_t sys_user_uart_getchar() {
+ 96   // TODO (lab4_1 and lab4_2): implment the syscall of sys_user_uart_getchar and modify it in lab4_2.
+ 97   // hint (lab4_1): The functionality of sys_user_uart_getchar is to get data from UART address.
+ 98   // Therefore we should check the data from the address of bluetooth status repeatedly, until the data is ready. 
+ 99   // Then read the data from the address of bluetooth reading and return.
+100   // hint (lab4_2): the functionality of sys_user_uart_getchar is let process sleep and wait for value. therefore,
+101   // we should call do_sleep to let process 0 sleep. 
+102   // then we should get uartvalue and return.
+103     panic( "You have to implement sys_user_uart_getchar to get data from UART using uartgetchar in lab4_1 and modify it in lab4_2.\n" );
+104 
+105 }
+```
+
+**注意：编写自己的代码时千万不要修改或删去lab4_2的提示（即100行到102行），防止后面实验的合并错误！**
 
 **实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab4_1中所做的工作**：
 
 ```
 $ git commit -a -m "my work on lab4_1 is done."
 ```
-
-
 
 <a name="PLIC"></a>
 
@@ -300,7 +236,7 @@ $ git commit -a -m "my work on lab4_1 is done."
 
 - user/app_PLIC.c
 
-```
+```c
 1	/*
 2	 * Below is the given application for lab4_2.
 3	 * The goal of this app is to control the car via Bluetooth. 
@@ -354,171 +290,56 @@ $ git commit -a -m "my work on lab4_1 is done."
 51	}
 ```
 
-应用通过中断的方式从蓝牙端获取指令，实现对小车的控制功能。
+应用通过中断的方式从蓝牙端获取指令，实现对小车的控制功能。在等待蓝牙的进程休眠的时候，会执行delay进程，可以看到waiting for you提示信息。
 
-- 切换到lab4_2，继承lab4_1及之前实验所做的修改，并make后的直接运行结果：
-
-```
-//切换到lab4_2
-$ git checkout lab4_2_PLIC
-
-//继承lab4_1以及之前的答案
-$ git merge lab4_1_poll -m "continue to work on lab4_2"
-
-//重新构造
-$ make clean; make
-
-//运行构造结果
-In m_start, hartid:0
-HTIF is available!
-(Emulated) memory size: 512 MB
-Enter supervisor mode...
-PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
-free physical memory address: [0x0000000080010000, 0x000000008003ffff] 
-kernel memory manager is initializing ...
-kernel pagetable addr is 0x000000008003e000
-KERN_BASE 0x0000000080000000
-physical address of _etext is: 0x0000000080005000
-kernel page table is on 
-Switching to user mode...
-in alloc_proc. user frame 0x0000000080039000, user stack 0x000000007ffff000, user kstack 0x0000000080038000 
-User application is loading.
-Application: app_poll
-CODE_SEGMENT added at mapped info offset:3
-Application program entry point (virtual address): 0x00000000810000de
-going to insert process 0 to ready queue.
-going to schedule process 0 to run.
-please input the instruction through bluetooth!
-You need to implement the uart_getchar function in lab4_2 here!
-
-System is shutting down with exit code -1.
-
-```
-
-
+切换到lab4_2，继承lab4_1及之前实验所做的修改，直接编译执行结果和完成后的lab4_1一致，一直阻塞在这里等待蓝牙数据。需要修改lab4_1所写的代码并添加中断处理，使得等待蓝牙的进程能够自动休眠，执行delay进程，直到发生外部中断后才继续执行。
 
 <a name="lab4_2_content"></a>
 
 #### **实验内容**
 
-如输出提示所表示的那样，需要找到并完成对uartgetchar，do_sleep，getuartvalue的调用，并获得以下预期结果：
-
-```
-In m_start, hartid:0
-HTIF is available!
-(Emulated) memory size: 512 MB
-Enter supervisor mode...
-PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
-free physical memory address: [0x0000000080010000, 0x000000008003ffff] 
-kernel memory manager is initializing ...
-kernel pagetable addr is 0x000000008003e000
-KERN_BASE 0x0000000080000000
-physical address of _etext is: 0x0000000080005000
-kernel page table is on 
-Switching to user mode...
-in alloc_proc. user frame 0x0000000080039000, user stack 0x000000007ffff000, user kstack 0x0000000080038000 
-User application is loading.
-Application: app_polling
-CODE_SEGMENT added at mapped info offset:3
-Application program entry point (virtual address): 0x00000000810000de
-going to insert process 0 to ready queue.
-going to schedule process 0 to run.
-Ticks 0
-please input the instruction through bluetooth!
-Ticks 1
-User exit with code:0.
-no more ready processes, system shutdown now.
-System is shutting down with exit code 0.
-```
+如输出提示所表示的那样，需要修改lab4_1所写的代码并添加中断处理。完成后按lab4_1的方法执行，程序在等待蓝牙的时候会不断输出waiting for you提示信息，在手机上输入控制指令后，小车应能根据指令反应。
 
 <a name="lab4_2_guide"></a>
 
 #### **实验指导**
 
-对于本实验的应用，我们需要在lab4_1基础上实现基于中断的uartgetchar。对代码进行跟踪，我们可以在kernel/syscall.h中查看新增的系统调用以及编号：
+在kernel/syscall.c中找到lab4_1写的代码，并根据注释进行修改：
 
-```
-16	#define SYS_user_uart_putchar (SYS_user_base + 6)
-17	#define SYS_user_uart_getchar (SYS_user_base + 7)
-18	#define SYS_user_gpio_reg_write (SYS_user_base + 8)
-```
-
-继续追踪，我们发现在kernel/syscall.c的do_syscall函数中新增了对应系统调用编号的实现函数，对于新增系统调用，分别有如下函数进行处理：
-
-```
-139	    case SYS_user_uart_getchar:
-140	      return sys_user_uart_getchar();
-```
-
-你的任务即为在kernel/syscall.c中追踪并完善对应的函数。
-
-在kernel/syscall.c中找到函数实现空缺，并根据注释完成uart系统调用：
-
-```
-88	//
-89	// implement the uart syscall
-90	//
-103	ssize_t sys_user_uart_getchar() {
-104	    panic( "You need to implement the uart_getchar function in lab4_2 here.\n" );
-105	    //sleep
-106	    
-107	    //Wait for wake
-108	    
-109	    //get the value
-110	    
-111	    //Return the result character
-112	    
-113	    
-114	}
+```c
+ 95 ssize_t sys_user_uart_getchar() {
+ 96   // TODO (lab4_1 and lab4_2): implment the syscall of sys_user_uart_getchar and modify it in lab4_2.
+ 97   // hint (lab4_1): The functionality of sys_user_uart_getchar is to get data from UART address.
+ 98   // Therefore we should check the data from the address of bluetooth status repeatedly, until the data is ready. 
+ 99   // Then read the data from the address of bluetooth reading and return.
+100   // hint (lab4_2): the functionality of sys_user_uart_getchar is let process sleep and wait for value. therefore,
+101   // we should call do_sleep to let process 0 sleep. 
+102   // then we should get uartvalue and return.
+103     panic( "You have to implement sys_user_uart_getchar to get data from UART using uartgetchar in lab4_1 and modify it in lab4_2.\n" ); // 该行已被你之前写的代码替换
+104 
+105 }
 ```
 
 当蓝牙有数据发送时，pke会收到外部中断，你需要完成接收到外部中断后的处理。
 
 在kernel/strap.c中找到函数空缺，并根据注释完成中断处理函数：
 
+```c
+103     case CAUSE_MEXTERNEL_S_TRAP:
+104       {
+105         //reset the PLIC so that we can get the next external interrupt.
+106         volatile int irq = *(uint32 *)0xc201004L;
+107         *(uint32 *)0xc201004L = irq;
+108         volatile int *ctrl_reg = (void *)(uintptr_t)0x6000000c;
+109         *ctrl_reg = *ctrl_reg | (1 << 4);
+110         // TODO (lab4_2): implment the case of CAUSE_MEXTERNEL_S_TRAP.
+111         // hint: the case of CAUSE_MEXTERNEL_S_TRAP is to get data from UART address and wake the process. therefore,
+112         // and you need to store the data in struct process.value. 
+113         panic( "You have to implement CAUSE_MEXTERNEL_S_TRAP to get data from UART and wake the process 0 in lab4_2.\n" );
+114         
+115         break;
+116       }
 ```
-100     case CAUSE_MEXTERNEL_S_TRAP:
-101       {
-102         panic( "You need to complete case CAUSE_MEXTERNEL_S_TRAP function in lab4_2 here.\n"
-103         int irq = *(uint32 *)0xc201004L;
-104         *(uint32 *)0xc201004L = irq;
-105         volatile int *ctrl_reg = (void *)(uintptr_t)0x6000000c;
-106         *ctrl_reg = *ctrl_reg | (1 << 4);
-107         
-108         // get the data from MMIO.
-109         // send it to the process.
-110         // call function to awake process[0]
-111         
-112         
-113         
-114         break;
-115       }
-```
-
-
-
-在kernel/process.c中找到函数实现空缺，并根据注释完成do_sleep函数：
-
-```
-221 void do_sleep(){
-222   panic( "You need to implement do_sleep function in lab4_2 here.\n"
-223   // set the process BLOCKED.
-224 }
-```
-
-在kernel/process.c中找到函数实现空缺，并根据注释完成do_wake函数：
-
-```
-226 void do_wake(){
-227   panic( "You need to implement do_sleep function in lab4_2 here.\n"
-228   //set the process READY.
-229   //insert_to_ready_queue
-230   
-231   //schedule
-232 }
-```
-
-
 
 **实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab4_2中所做的工作**：
 
@@ -528,177 +349,140 @@ $ git commit -a -m "my work on lab4_2 is done."
 
 <a name="hostdevice"></a>
 
-## 6.4 lab4_3 
+## 6.4 lab4_3_hostdevice
 
 <a name="lab4_3_app"></a>
 
 #### **给定应用**
 - user/app_host_device.c
 
-```
-1	 #pragma pack(4)
-2	#define _SYS__TIMEVAL_H_
-3	struct timeval {
-4	    unsigned int tv_sec;
-5	    unsigned int tv_usec;
-6	};
-7	
-8	#include "user_lib.h"
-9	#include "videodev2.h"
-10	#define DARK 64
-11	#define RATIO 7 / 10
-12	
-13	int main() {
-14	    char *info = allocate_share_page();
-15	    int pid = do_fork();
-16	    if (pid == 0) {
-17	        int f = do_open("/dev/video0", O_RDWR), r;
-18	
-19	        struct v4l2_format fmt;
-20	        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-21	        fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
-22	        fmt.fmt.pix.width = 320;
-23	        fmt.fmt.pix.height = 180;
-24	        fmt.fmt.pix.field = V4L2_FIELD_NONE;
-25	        r = do_ioctl(f, VIDIOC_S_FMT, &fmt);
-26	        printu("Pass format: %d\n", r);
-27	
-28	        struct v4l2_requestbuffers req;
-29	        req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-30	        req.count = 1; req.memory = V4L2_MEMORY_MMAP;
-31	        r = do_ioctl(f, VIDIOC_REQBUFS, &req);
-32	        printu("Pass request: %d\n", r);
-33	
-34	        struct v4l2_buffer buf;
-35	        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-36	        buf.memory = V4L2_MEMORY_MMAP; buf.index = 0;
-37	        r = do_ioctl(f, VIDIOC_QUERYBUF, &buf);
-38	        printu("Pass buffer: %d\n", r);
-39	
-40	        int length = buf.length;
-41	        char *img = do_mmap(NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED, f, buf.m.offset);
-42	        unsigned int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-43	        r = do_ioctl(f, VIDIOC_STREAMON, &type);
-44	        printu("Open stream: %d\n", r);
-45	
-46	        char *img_data = allocate_page();
-47	        for (int i = 0; i < (length + 4095) / 4096 - 1; i++)
-48	            allocate_page();
-49	        yield();
-50	
-51	        for (;;) {
-52	            if (*info == '1') {
-53	                r = do_ioctl(f, VIDIOC_QBUF, &buf);
-54	                printu("Buffer enqueue: %d\n", r);
-55	                r = do_ioctl(f, VIDIOC_DQBUF, &buf);
-56	                printu("Buffer dequeue: %d\n", r);
-57	                r = read_mmap(img_data, img, length);
-58	                int num = 0;
-59	                for (int i = 0; i < length; i += 2)
-60	                    if (img_data[i] < DARK) num++;
-61	                printu("Dark num: %d > %d\n", num, length / 2 * RATIO);
-62	                if (num > length / 2 * RATIO) {
-63	                    *info = '0'; gpio_reg_write(0x00);
-64	                }
-65	            } else if (*info == 'q') break;
-66	        }
-67	
-68	        for (char *i = img_data; i - img_data < length; i += 4096)
-69	            free_page(i);
-70	        r = do_ioctl(f, VIDIOC_STREAMOFF, &type);
-71	        printu("Close stream: %d\n", r);
-72	        do_munmap(img, length); do_close(f); exit(0);
-73	    } else {
-74	        yield();
-75	        for (;;) {
-76	            char temp = (char)uartgetchar();
-77	            printu("From bluetooth: %c\n", temp);
-78	            *info = temp;
-79	            switch (temp) {
-80	                case '1': gpio_reg_write(0x2e); break; //前进
-81	                case '2': gpio_reg_write(0xd1); break; //后退
-82	                case '3': gpio_reg_write(0x63); break; //左转
-83	                case '4': gpio_reg_write(0x9c); break; //右转
-84	                case 'q': exit(0); break;
-85	                default: gpio_reg_write(0x00); break;  //停止
-86	            }
-87	        }
-88	    }
-89	    return 0;
-90	}
-```
-
-该用户程序包含两个进程，其中主进程和实验4_2类似，负责接收蓝牙发送过来的数据，根据数据控制小车行动（前进、后退、左转、右转、停止）；子进程则负责拍摄和分析，首先初始化摄像头设备，然后是个死循环判断摄像头拍摄的图像数据：如果当前小车处于前进状态，则拍摄，然后检查数据，如果判断前面有障碍物则控制车轮停转（刹车），否则如果主进程退出了，则自己进行释放文件、内存、关闭设备等操作，再退出。在用户程序操控摄像头的过程中，使用了ioctl、mmap、munmap等系统调用，需对其进行完善从而实现小车的障碍识别和停止功能。
-
-- 切换到lab4_3、继承lab4_2中所做修改，并make后的直接运行结果：
-
-```
-//切换到lab4_2
-$ git checkout lab4_2_PLIC
-
-//继承lab3_3以及之前的答案
-$ git merge lab4_2_PLIC -m "continue to work on lab4_2"
-
-//重新构造
-$ make clean; make
-
-//运行构造结果
-In m_start, hartid:0
-HTIF is available!
-(Emulated) memory size: 512 MB
-Enter supervisor mode...
-PKE kernel start 0x0000000080000000, PKE kernel end: 0x0000000080010000, PKE kernel size: 0x0000000000010000 .
-free physical memory address: [0x0000000080010000, 0x000000008003ffff] 
-kernel memory manager is initializing ...
-kernel pagetable addr is 0x000000008003e000
-KERN_BASE 0x0000000080000000
-physical address of _etext is: 0x0000000080005000
-kernel page table is on 
-Switching to user mode...
-in alloc_proc. user frame 0x0000000080039000, user stack 0x000000007ffff000, user kstack 0x0000000080038000 
-User application is loading.
-Application: app_PLIC
-CODE_SEGMENT added at mapped info offset:3
-Application program entry point (virtual address): 0x00000000810000de
-going to insert process 0 to ready queue.
-going to schedule process 0 to run.
-please input the instruction through bluetooth!
-You need to implement the uart_getchar function in lab4_3 here!
-
-System is shutting down with exit code -1.
-
+```c
+  1 #pragma pack(4) // 设置结构体按4字节对齐，因为PS端是32位，而riscv编译器默认会按64位的8字节对齐
+  2 #define _SYS__TIMEVAL_H_ // 重载timeval结构体，因为riscv编译器里的timeval两个属性都是8字节和PS端32位系统不同                           
+  3 struct timeval {
+  4     unsigned int tv_sec;
+  5     unsigned int tv_usec;
+  6 };
+  7 
+  8 #include "user_lib.h"
+  9 #include "videodev2.h"
+ 10 #define DARK 64
+ 11 #define RATIO 7 / 10
+ 12 
+ 13 int main() {
+ 14     char *info = allocate_share_page(); // 分配一个共享页，方便父子进程之间传递信息（小车的状态）
+ 15     int pid = do_fork();
+ 16     if (pid == 0) { // 子进程
+ 17         int f = do_open("/dev/video0", O_RDWR), r; // 打开设备文件
+ 18 
+ 19         struct v4l2_format fmt;
+ 20         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+ 21         fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+ 22         fmt.fmt.pix.width = 320;
+ 23         fmt.fmt.pix.height = 180;
+ 24         fmt.fmt.pix.field = V4L2_FIELD_NONE;
+ 25         r = do_ioctl(f, VIDIOC_S_FMT, &fmt); // 设置摄像头：图片大小为320*180，格式为YUYV
+ 26         printu("Pass format: %d\n", r);
+ 27 
+ 28         struct v4l2_requestbuffers req;
+ 29         req.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+ 30         req.count = 1; req.memory = V4L2_MEMORY_MMAP;
+ 31         r = do_ioctl(f, VIDIOC_REQBUFS, &req); // 设置摄像头：使用mmap方式读取数据，缓冲区数量为1
+ 32         printu("Pass request: %d\n", r);
+ 33 
+ 34         struct v4l2_buffer buf;
+ 35         buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+ 36         buf.memory = V4L2_MEMORY_MMAP; buf.index = 0;
+ 37         r = do_ioctl(f, VIDIOC_QUERYBUF, &buf); // 设置buf结构体对应的缓冲区索引
+ 38         printu("Pass buffer: %d\n", r);
+ 39 
+ 40         int length = buf.length;
+ 41         char *img = do_mmap(NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED, f, buf.m.offset); // mmap映射内存
+ 42         unsigned int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+ 43         r = do_ioctl(f, VIDIOC_STREAMON, &type); // 开启摄像头
+ 44         printu("Open stream: %d\n", r);
+ 45 
+ 46         char *img_data = allocate_page(); // 分配内存，用来保存图片
+ 47         for (int i = 0; i < (length + 4095) / 4096 - 1; i++)
+ 48             allocate_page(); // 图片较大，需分配更多的页
+ 49         yield(); // 初始化完设备了，让主进程开始监听蓝牙
+ 50 
+ 51         for (;;) {
+ 52             if (*info == '1') { // 小车处于前进状态
+ 53                 r = do_ioctl(f, VIDIOC_QBUF, &buf); // 缓冲入队
+ 54                 printu("Buffer enqueue: %d\n", r);
+ 55                 r = do_ioctl(f, VIDIOC_DQBUF, &buf); // 缓冲出队，这时拍摄完一张照片
+ 56                 printu("Buffer dequeue: %d\n", r);
+ 57                 r = read_mmap(img_data, img, length); // 把照片从PS端的映射内存读出来
+ 58                 int num = 0;
+ 59                 for (int i = 0; i < length; i += 2)
+ 60                     if (img_data[i] < DARK) num++; // 统计灰度小于DARK的像素数量
+ 61                 printu("Dark num: %d > %d\n", num, length / 2 * RATIO);
+ 62                 if (num > length / 2 * RATIO) { // 如果灰度小于DARK的像素数量大于像素总数的RATIO比例（注意length是yuyv图片数据的总大小，像素总数是该大小的一半）
+ 63                     *info = '0'; gpio_reg_write(0x00); // 刹车
+ 64                 }
+ 65             } else if (*info == 'q') break;
+ 66         }
+ 67 
+ 68         for (char *i = img_data; i - img_data < length; i += 4096)
+ 69             free_page(i); // 释放内存
+ 70         r = do_ioctl(f, VIDIOC_STREAMOFF, &type); // 关闭摄像头
+ 71         printu("Close stream: %d\n", r);
+ 72         do_munmap(img, length); do_close(f); exit(0); // 关闭文件和解映射  
+ 73     } else { // 主进程
+ 74         yield(); // 先让子进程初始化完摄像头
+ 75         for (;;) {
+ 76             char temp = (char)uartgetchar(); // 接受蓝牙信号
+ 77             printu("From bluetooth: %c\n", temp);
+ 78             *info = temp;
+ 79             switch (temp) {
+ 80                 case '1': gpio_reg_write(0x2e); break; //前进
+ 81                 case '2': gpio_reg_write(0xd1); break; //后退
+ 82                 case '3': gpio_reg_write(0x63); break; //左转
+ 83                 case '4': gpio_reg_write(0x9c); break; //右转
+ 84                 case 'q': exit(0); break;
+ 85                 default: gpio_reg_write(0x00); break;  //停止
+ 86             }
+ 87         }
+ 88     }
+ 89     return 0;
+ 90 }         
 ```
 
-
+该用户程序包含两个进程，其中主进程和实验4_2类似，负责接收蓝牙发送过来的数据，根据数据控制小车行动（前进、后退、左转、右转、停止）；子进程则负责拍摄和分析，首先初始化摄像头设备，然后是个死循环判断摄像头拍摄的图像数据：如果当前小车处于前进状态，则拍摄，然后检查数据，如果判断前面有障碍物则控制车轮停转（刹车），否则如果主进程退出了，则自己进行释放文件、内存、关闭设备等操作，再退出。在用户程序操控摄像头的过程中，使用了ioctl、mmap、munmap等系统调用，你需完善其中的open和ioctl两个系统调用，对其进行完善从而实现小车的障碍识别和停止功能。
 
 <a name="lab4_3_content"></a>
 
 ####  实验内容
 
-如应用提示所表示的那样，读者需要找到并完成对ioctl的调用，使得用户能够设置设备参数，从而控制摄像头实现拍照等功能；获取图片后，检查数据，从而判断前方是否出现障碍物。
+如应用提示所表示的那样，读者需要找到并完成对open和ioctl的调用，使得用户能够设置设备参数，从而控制摄像头实现拍照等功能；获取图片后，检查数据，从而判断前方是否出现障碍物。
 
 跟踪相关系统调用，在kernel/file.c里可以看到需要补充的函数：
 
-```
-25	int do_open(char *pathname, int flags) {
-26	    // TODO (lab4_3): call host open through spike_file_open and then bind fd to spike_file
-27	    // hint: spike_file_dup function can bind spike_file_t to an int fd.
-28	    panic( "You need to finish open function in lab4_3.\n" );
-29	}
-```
-
-```
-39	int do_ioctl(int fd, uint64 request, char *data) {
-40	    // TODO (lab4_3): call host ioctl through frontend_sycall
-41	    // hint: fronted_syscall ioctl argument:
-42	    // 1.call number
-43	    // 2.fd
-44	    // 3.the order to device
-45	    // 4.data address
-46	    panic( "You need to call host's ioctl by frontend_syscall in lab4_3.\n" );
-47	    return frontend_syscall(HTIFSYS_ioctl, spike_file_get(fd)->kfd,
-48	            request, (uint64)data, 0, 0, 0, 0);
-49	}
+```c
+ 25 int do_open(char *pathname, int flags) {
+ 26     // TODO (lab4_3): call host open through spike_file_open and then bind fd to spike_file
+ 27     // hint: spike_file_dup function can bind spike_file_t to an int fd.
+ 28     panic( "You need to finish open function in lab4_3.\n" );
+ 29 }
+ 30 int do_write(int fd, char *buf, uint64 count) {
+ 31     spike_file_t *f = spike_file_get(fd);
+ 32     return spike_file_write(f, buf, count);
+ 33 }
+ 34 int do_close(int fd) {
+ 35     spike_file_t *f = spike_file_get(fd);
+ 36     return spike_file_close(f);
+ 37 }
+ 38 
+ 39 int do_ioctl(int fd, uint64 request, char *data) {
+ 40     // TODO (lab4_3): call host ioctl through frontend_sycall
+ 41     // hint: fronted_syscall ioctl argument:
+ 42     // 1.call number
+ 43     // 2.fd
+ 44     // 3.the order to device
+ 45     // 4.data address
+ 46     panic( "You need to call host's ioctl by frontend_syscall in lab4_3.\n" );
+ 47 }
 ```
 
 实验预期结果：小车在前进过程中能够正常识别障碍物后并自动停车。
@@ -712,28 +496,22 @@ System is shutting down with exit code -1.
 USB摄像头最基础的控制方法是使用读写设备文件的方式。拍摄一张照片包含以下过程：
 
 * 打开设备文件，使用open函数
-* 设置设备参数，使用ioctl函数
+* 设置设备参数，使用ioctl函数，包括设置摄像头的图像分辨率和格式、读取方式、缓冲数量和索引等
 * 映射内存，由于USB摄像头对应的设备文件不支持直接用read函数进行读写，所以需要用mmap函数将文件映射到一段虚拟地址，通过虚拟地址进行读写
-* 拍摄，使用ioctl函数控制
+* 拍摄，使用ioctl函数控制，设置缓冲区的入队和出队为一个拍摄过程
 * 结束和清理，包含使用ioctl函数关闭设备，使用munmap函数解映射，使用close函数关闭设备文件
-
-其中ioctl、mmap、munmap三个函数是PKE和riscv-fesvr不支持的，需要在本设计中添加，因此本设计的重点包含以下三个内容：
-
-* 对riscv-fesvr的修改：riscv-fesvr是PS端（Arm）的一个程序，用于控制PL端（Riscv）程序的启动以及和通信。通过riscv-fesvr，PL端上的程序也可以访问PS端的文件，调用一些PS端系统的函数。原版的riscv-fesvr不支持ioctl和mmap等函数，而操控USB摄像头的用户程序必须使用这些函数，所以需要对riscv-fesvr进行修改，使得PL端上运行的PKE和用户程序能够通过riscv-fesvr这个中间层调用宿主机的系统函数从而控制摄像头；
-* 对PKE内核代码的修改：需要为riscv-fesvr新增的函数调用提供用户层接口。
-* 对用户代码的修改：有了对fesvr和内核的修改，用户程序就可以调用各类系统调用函数操控摄像机了。为了实现避障的功能，程序还需要对获得的图片信息进行解码和分析，根据前方是否为障碍物选择是否刹车。
 
 ##### 图片解析
 
-应用第21行可以看到，我们从摄像头获取的数据是YUYV格式，读者可进行查阅，它用灰度、蓝色色度、红色色度三个属性表示颜色，每个像素点都有灰度属性。由于我们分析障碍物只需要灰度图，所以取每个像素点的灰度属性即可。
+在本实验的用户程序中，我们实现了一个非常简单的障碍物判断算法：计算灰度小于64的像素点个数，如果个数大于像素点总数的7/10，即认为前方是障碍物。
 
-因此对于获取过来的数据删去奇数索引的数据，就可以得到灰度图。对于障碍物的判断，我们使用了一个比较简单的算法：计算灰度小于64的像素点个数，如果个数大于像素点总数的7/10，即认为前方是障碍物。
+应用第21行可以看到，我们从摄像头获取的数据是YUYV格式，读者可进行查阅，它用灰度、蓝色色度、红色色度三个属性表示颜色，每个像素点都有灰度属性。由于我们分析障碍物只需要灰度图，所以取每个像素点的灰度属性即可。因此对于获取过来的数据删去奇数索引的数据，就可以得到灰度图。
 
-**注意：对于灰度阈值的设定可根据环境亮度进行一定的调整，可以先根据摄像头返回的图像进行分析，计算出对应障碍物的灰度值；灰度阈值越精确，小车对于障碍物的识别将越灵敏，并能在合理的距离内识别到障碍物并停车。**
+注意：对于灰度阈值的设定可根据环境亮度进行一定的调整，可以先根据摄像头返回的图像进行分析，计算出对应障碍物的灰度值；灰度阈值越精确，小车对于障碍物的识别将越灵敏，并能在合理的距离内识别到障碍物并停车。
+**虽然如此，该算法仍不是非常精确。所以，这里给出的障碍物判断算法仅供参考，我们鼓励大家编写更高级的算法，实现更强大的功能。**
 
 **实验完毕后，记得提交修改（命令行中-m后的字符串可自行确定），以便在后续实验中继承lab4_3中所做的工作**：
 
 ```
 $ git commit -a -m "my work on lab4_3 is done."
 ```
-
