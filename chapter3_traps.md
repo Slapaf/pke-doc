@@ -1638,7 +1638,7 @@ System is shutting down with exit code 0.
 
 ```bash
 //切换到lab1_challenge1_backtrace
-$ git checkout lab1_challenge1_backtrace
+$ git checkout lab1_challenge1_backtrace 
 
 //继承lab1_3以及之前的答案
 $ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
@@ -1654,12 +1654,6 @@ $ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
 
 应用程序调用print_backtrace()时，应能够通过控制输入的参数（如例子user/app_print_backtrace.c中的7）控制回溯的层数。例如，如果调用print_backtrace(5)则只输出5层回溯；如果调用print_backtrace(100)，则应只回溯到main函数就停止回溯（因为调用的深度小于100）。
 
-- 讨论的简化
-
-实验可以对中间函数，如user/app_print_backtrace.c中的f1到f8，进行讨论上的简化，可假设它们都不带参数。
-
-
-
 <a name="lab1_challenge1_guide"></a>
 
 ####  实验指导
@@ -1668,8 +1662,26 @@ $ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
 
 - 系统调用路径上的完善，可参见[3.2](#syscall)中的知识；
 - 在操作系统内核中获取用户程序的栈。这里需要注意的是，PKE系统中当用户程序通过系统调用陷入到内核时，会切换到S模式的“用户内核”栈，而不是在用户栈上继续操作。我们的print_backtrace()函数的设计目标是回溯并打印用户进程的函数调用情况，所以，进入操作系统内核后，需要找到用户进程的用户态栈来开始回溯；
-- 找到用户态栈后，我们需要了解用户态栈的结构。实际上，这一点在我们的第一章就有[举例](chapter1_riscv.md#call_stack_structure)来说明，读者可以回顾一下第一章的例子。另外，由于我们可以对讨论进行简化（即假设中间函数无参数），那么单次函数调用的栈深度我们也可以进行相应的假设；
-- 通过用户栈找到函数的返回地址后，需要将虚拟地址转换为源程序中的符号。这一点，读者需要了解ELF文件中的符号节（.symtab section），以及字符串节（.strtab section）的相关知识，了解这两个节（section）里存储的内容以及存储的格式等内容。对ELF的这两个节，网上有大量的介绍，例如[这里](https://blog.csdn.net/edonlii/article/details/8779075)。
+- 找到用户态栈后，我们需要了解用户态栈的结构。实际上，这一点在我们的第一章就有[举例](chapter1_riscv.md#call_stack_structure)来说明，读者可以回顾一下第一章的例子；
+- 通过用户栈找到函数的返回地址后，需要将虚拟地址转换为源程序中的符号。这一点，读者需要了解ELF文件中的符号节（.symtab section），以及字符串节（.strtab section）的相关知识，了解这两个节（section）里存储的内容以及存储的格式等内容。对ELF的这两个节，网上有大量的介绍，例如[这里](https://blog.csdn.net/edonlii/article/details/8779075)，或阅读[Linux Man Page](https://man7.org/linux/man-pages/man5/elf.5.html)。
+
+提示：
+
+理论上，我们希望你了解函数调用时栈帧的结构，通过fp寄存器(s0)寻找各个栈帧；然而，编译器一般会优化掉fp，使得它的值始终为0，在发生函数调用时也不保存这个寄存器，实验的Makefile已经使用`-fno-omit-frame-pointer`禁止了此项优化。此时函数调用的栈帧类似下图：
+
+<img src="pictures/fig1_2.png" alt="fig2_install_1" style="zoom:100%;" />
+
+注意，函数调用的叶子结点一般不会将ra保存到栈中；
+
+如果你发现使用fp追踪栈底难度太大，可以假设用户程序的函数调用总是定长的；为了获得这个长度，你可以：
+
+```bash
+$ riscv64-unknown-elf-objdump -d obj/app_print_backtrace
+```
+
+观察`f1`~ `f8`开始时的汇编代码，特别注意用户态函数`do_user_call`，它的栈帧与`f1` 等略有不同。
+
+使用这种方法虽然在局部变量太多，或者函数参数较多时无法正确实现 backtrace 功能，也不是我们预期的做法，但我们进行测试时确实会使用简单的测试用例（没有参数，局部变量），因此可以通过 :)
 
 **注意：完成实验内容后，请读者另外编写应用，通过调用print_backtrace()函数，并带入不同的深度参数，对自己的实现进行检测。**
 
