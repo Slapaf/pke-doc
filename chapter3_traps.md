@@ -1669,11 +1669,11 @@ $ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
 
 理论上，我们希望你了解函数调用时栈帧的结构，通过fp寄存器(s0)寻找各个栈帧；然而，编译器一般会优化掉fp，使得它的值始终为0，在发生函数调用时也不保存这个寄存器，实验的Makefile已经使用`-fno-omit-frame-pointer`禁止了此项优化。此时函数调用的栈帧类似下图：
 
-<img src="pictures/fig1_2.png" alt="fig2_install_1" style="zoom:100%;" />
+<img src="pictures/fig1_2.png" alt="fig1_2" style="zoom:100%;" />
 
 注意，函数调用的叶子结点一般不会将ra保存到栈中；
 
-如果你发现使用fp追踪栈底难度太大，可以假设用户程序的函数调用总是定长的；为了获得这个长度，你可以：
+如果你发现使用fp追踪栈底难度太大，可以假设用户程序的函数调用产生的栈帧总是定长的；为了获得这个长度，你可以：
 
 ```bash
 $ riscv64-unknown-elf-objdump -d obj/app_print_backtrace
