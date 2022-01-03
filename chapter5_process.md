@@ -1052,22 +1052,20 @@ will fork a child from parent 0.
 in alloc_proc. user frame 0x0000000087fae000, user stack 0x000000007ffff000, user kstack 0x0000000087fad000 
 do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
 going to insert process 1 to ready queue.
-going to insert process 0 to ready queue.
 going to schedule process 1 to run.
 User call fork.
 will fork a child from parent 1.
 in alloc_proc. user frame 0x0000000087fa1000, user stack 0x000000007ffff000, user kstack 0x0000000087fa0000 
 do_fork map code segment at pa:0000000087fb2000 of parent to child at va:0000000000010000.
 going to insert process 2 to ready queue.
-going to insert process 1 to ready queue.
-going to schedule process 0 to run.
-going to insert process 0 to ready queue.
 going to schedule process 2 to run.
 Grandchild process end, flag = 2.
 User exit with code:0.
+going to insert process 1 to ready queue.
 going to schedule process 1 to run.
 Child process end, flag = 1.
 User exit with code:0.
+going to insert process 0 to ready queue.
 going to schedule process 0 to run.
 Parent process end, flag = 0.
 User exit with code:0.
