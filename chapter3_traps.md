@@ -1667,7 +1667,7 @@ $ git merge lab1_3_irq -m "continue to work on lab1_challenge1"
 
 提示：
 
-理论上，我们希望你了解函数调用时栈帧的结构，通过fp寄存器(s0)寻找各个栈帧；然而，编译器一般会优化掉fp，使得它的值始终为0，在发生函数调用时也不保存这个寄存器，实验的Makefile已经使用`-fno-omit-frame-pointer`禁止了此项优化。此时函数调用的栈帧类似下图：
+理论上，我们希望你了解函数调用时栈帧的结构，通过fp寄存器(s0)寻找各个栈帧；然而，编译器一般会优化掉fp，使得它的值始终为0，在发生函数调用时也不保存这个寄存器，实验的Makefile已经使用`-fno-omit-frame-pointer`禁止了此项优化。此时函数调用的栈帧（此时 bar 函数作为叶子调用函数）类似下图：
 
 <img src="pictures/fig1_2.png" alt="fig1_2" style="zoom:100%;" />
 
