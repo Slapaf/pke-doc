@@ -1685,6 +1685,60 @@ $ riscv64-unknown-elf-objdump -d obj/app_print_backtrace
 
 使用这种方法虽然在局部变量太多，或者函数参数较多时无法正确实现 backtrace 功能，也不是我们预期的做法，但我们进行测试时确实会使用简单的测试用例（没有参数，局部变量），因此可以通过 :)
 
+理论上，完成该实验需要同学们掌握对于ELF文件的结构，其主体结构如图所示:
+
+![ELF](pictures/elf.png)
+
+由图得知，一个 ELF 头在文件的开始，保存了路线图(road map)，描述了该文件的组织情况。可以说， ELF 头是整个ELF文件的“灵魂”所在。所以说我们要对ELF头进行研究。
+
+在`elf.h`中我们看到了ELF头存储的内容:本文档只提示与实验内容息息相关的成员:`shoff`记录了第一个Section Header的位置，`shentsize`代表了一个Section Header的大小，`shnum`代表一共有多少个Section Header，`shstrndx`代表了String Table的索引值，同学们可以试着打印一下`shstrndx`的值是多少。
+
+```C
+9  // elf header structure
+10 typedef struct elf_header_t {
+11   uint32 magic;
+12   uint8 elf[12];
+13   uint16 type;      /* Object file type */
+14   uint16 machine;   /* Architecture */
+15   uint32 version;   /* Object file version */
+16   uint64 entry;     /* Entry point virtual address */
+17   uint64 phoff;     /* Program header table file offset */
+18   uint64 shoff;     /* Section header table file offset */
+19   uint32 flags;     /* Processor-specific flags */
+20   uint16 ehsize;    /* ELF header size in bytes */
+21   uint16 phentsize; /* Program header table entry size */
+22   uint16 phnum;     /* Program header table entry count */
+23   uint16 shentsize; /* Section header table entry size */
+24   uint16 shnum;     /* Section header table entry count */
+25   uint16 shstrndx;  /* Section header string table index */
+26 } elf_header;
+```
+
+在`elf_init`函数中完成了`elf header`的加载:
+
+```C
+42  // load the elf header
+43  if (elf_fpread(ctx, &ctx->ehdr, sizeof(ctx->ehdr), 0) != sizeof(ctx->ehdr)) return EL_EIO;
+```
+
+Section Header Table可以认为是一个线性结构，也就是说对于每一个Section Header，地址的寻找是线性的，换句话说，每个Section Header都是都是紧密相连的。
+
+下一步同学们需要在网上找到Section Header的结构，同学们如果有查询，你会发现其中的`name`是一个`uint32`类型的变量，而并不是一个`char*`类型的变量。这是因为`name`本质上来说是相对于某一个地址的偏移，查询一下String Table的结构，读取String Table的内容，你就会找到答案。
+
+通过String Table可以读取出每个Section Header对应的Section的名字，通过C语言的字符串比较函数，可以读取我们想要的Section的内容。
+
+对于`.symtab`和`.strtab`，大家需要查询`.symtab`表中每一个symbols的结构定义，你突然发现其中的`name`竟然又是一个`uint32`类型的变量，但是经历了那么多的你一定明白`name`的含义，试试看如何结合`.strtab`找到这个符号对应的名字。
+
+读取出`.symtab`和`.strtab`的信息之后就可以开始打印了，在进入中断之前其实所有的信息已经进入到了trapframe里面，所以说可以读取trapframe里面的信息读取某个寄存器在进入S态之前的值。
+
+理论上，大家还需要了解一个函数的使用方法。
+
+```C
+uint64 elf_fpread(elf_ctx *ctx, void *dest, uint64 nb, uint64 offset)
+```
+
+这个函数从offset这个地址中取出nb字节的数据放入到dest对应的地址中。
+
 **注意：完成实验内容后，请读者另外编写应用，通过调用print_backtrace()函数，并带入不同的深度参数，对自己的实现进行检测。**
 
 **另外，后续的基础实验代码并不依赖挑战实验，所以读者可自行决定是否将自己的工作提交到本地代码仓库中（当然，提交到本地仓库是个好习惯，至少能保存自己的“作品”）。**
