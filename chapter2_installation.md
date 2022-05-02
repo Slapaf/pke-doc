@@ -24,7 +24,7 @@
 
 如果读者的工作环境是Windows10的专业版，可采用WSL（Windows Subversion Linux）+MobaXterm的组合来搭建PKE的实验环境。在Windows10专业版上配置该环境的说明，可以参考[这里](https://zhuanlan.zhihu.com/p/81769058)。关于WSL，**应尽量使用WSL1不要升级到WSL2**，因为如果代码存放的位置在/mnt目录下，WSL1中运行编译、构建的速度比WSL2快很多（参考[这里](https://github.com/microsoft/WSL/issues/4197)）。
 
-需要说明的是，PKE实验并不需要中文字体、图形界面或者JAVA的支持，所以读者在安装WSL的过程中无须安装于汉化相关的包，也无需安装xfce、JDK等。只需要安装WSL的基础环境后，再按照[下一节](#subsec_ubuntu)的说明继续完成rsicv-pke开发环境的安装。
+需要说明的是，PKE实验并不需要中文字体、图形界面或者JAVA的支持，所以读者在安装WSL的过程中无须安装于汉化相关的包，也无需安装xfce、JDK等。只需要安装WSL的基础环境后，再按照[下一节](#subsec_softwarepackages)的说明继续完成rsicv-pke开发环境的安装。
 
 **方案二：Ubuntu或者其他Linux发行版**
 
