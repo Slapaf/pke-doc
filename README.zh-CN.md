@@ -24,8 +24,8 @@
  - [3.2 lab1_1 系统调用](chapter3_traps.md#syscall)  
  - [3.3 lab1_2 异常处理](chapter3_traps.md#exception)  
  - [3.4 lab1_3（外部）中断](chapter3_traps.md#irq)  
- - [3.5 lab1_challenge1 打印用户程序调用栈（难度：&#9733;&#9733;&#9734;&#9734;&#9734;）](chapter3_traps.md#lab1_challenge1_backtrace) 
- - [3.6 lab1_challenge2 打印异常代码行（难度：&#9733;&#9733;&#9733;&#9733;&#9734;）](chapter3_traps.md#lab1_challenge2_errorline)
+ - [3.5 lab1_challenge1 打印用户程序调用栈（难度：&#9733;&#9733;&#9733;&#9734;&#9734;）](chapter3_traps.md#lab1_challenge1_backtrace) 
+ - [3.6 lab1_challenge2 打印异常代码行（难度：&#9733;&#9733;&#9733;&#9734;&#9734;）](chapter3_traps.md#lab1_challenge2_errorline)
 
 [第四章. 实验2：内存管理](chapter4_memory.md)  
 
@@ -45,14 +45,12 @@
  - [5.5 lab3_challenge1 进程等待和数据段复制（难度：&#9733;&#9733;&#9734;&#9734;&#9734;）](chapter5_process.md#lab3_challenge1_wait) 
  - [5.6 lab3_challenge2 实现信号量（难度：&#9733;&#9733;&#9733;&#9734;&#9734;）](chapter5_process.md#lab3_challenge2_semaphore) 
 
-[第六章. 实验4：设备管理（基于RISCV-on-PYNQ）](chapter6_device.md)
+[第六章. 实验4：设备和文件（基于RISCV-on-PYNQ）](chapter6_device.md)
 
  - [6.1 实验4的基础知识](chapter6_device.md#fundamental)  
  - [6.2 lab4_1 轮询方式](chapter6_device.md#polling)  
  - [6.3 lab4_2 中断方式](chapter6_device.md#PLIC)  
  - [6.4 lab4_3 主机设备访问](chapter6_device.md#hostdevice)  
-
-第七章. 实验5：文件系统
 
 
 
