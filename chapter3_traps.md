@@ -1568,7 +1568,7 @@ $ git commit -a -m "my work on lab1_3 is done."
 
 <a name="lab1_challenge1_backtrace"></a>
 
-## 3.5 lab1_challenge1 打印用户程序调用栈（难度：&#9733;&#9733;&#9734;&#9734;&#9734;）
+## 3.5 lab1_challenge1 打印用户程序调用栈（难度：&#9733;&#9733;&#9733;&#9734;&#9734;）
 
 <a name="lab1_challenge1_app"></a>
 
@@ -1747,7 +1747,7 @@ uint64 elf_fpread(elf_ctx *ctx, void *dest, uint64 nb, uint64 offset)
 
 <a name="lab1_challenge2_errorline"></a>
 
-## 3.6 lab1_challenge2 打印异常代码行（难度：&#9733;&#9733;&#9733;&#9733;&#9734;）
+## 3.6 lab1_challenge2 打印异常代码行（难度：&#9733;&#9733;&#9733;&#9734;&#9734;）
 
 <a name="lab1_challenge2_app"></a>
 
