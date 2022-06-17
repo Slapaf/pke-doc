@@ -4,7 +4,10 @@
 
 [前言](preliminary.md)
 
+**PPT及视频内容（操作系统部分）可通过[百度网盘](https://pan.baidu.com/s/1H3PWEGwTa_GVrhhLYDwCwg)下载，提取码：66a3**
+
 [第一章. RISC-V体系结构](chapter1_riscv.md)  
+
 - [1.1 RISC-V发展历史](chapter1_riscv.md#history)  
 - [1.2 RISC-V汇编语言](chapter1_riscv.md#assembly)  
 - [1.3 机器的特权状态](chapter1_riscv.md#machinestates)  
