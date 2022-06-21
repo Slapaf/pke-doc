@@ -1,4 +1,4 @@
-# 基于RISC-V代理内核的操作系统课程实验与课程设计
+# 采用RISC-V代理内核的操作系统和系统能力培养实验
 
 **操作系统部分的实验用课件（PPT）及视频讲解内容可通过[百度网盘](https://pan.baidu.com/s/1H3PWEGwTa_GVrhhLYDwCwg)下载，提取码：66a3**
 
@@ -11,8 +11,7 @@
 - [1.3 机器的特权状态](chapter1_riscv.md#machinestates)  
 - [1.4 中断和中断处理](chapter1_riscv.md#traps)  
 - [1.5 页式虚存管理](chapter1_riscv.md#paging)  
-- [1.6 什么是代理内核](chapter1_riscv.md#proxykernel)  
-- [1.7 相关工具软件](chapter1_riscv.md#toolsoftware)  
+- [1.6 相关工具软件](chapter1_riscv.md#toolsoftware)  
 
 [第二章. 实验环境配置与实验构成](chapter2_installation.md)  
 
