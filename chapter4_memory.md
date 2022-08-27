@@ -20,7 +20,6 @@
   - [给定应用](#lab2_3_app)
   - [实验内容](#lab2_3_content)
   - [实验指导](#lab2_3_guide)
-
 - [4.5 lab2_challenge1 复杂缺页异常（难度：&#9733;&#9734;&#9734;&#9734;&#9734;）](#lab2_challenge1_pagefault)
   - [给定应用](#lab2_challenge1_app)
   - [实验内容](#lab2_challenge1_content)
@@ -106,45 +105,45 @@ spike将创建一个模拟的RISC-V机器，该机器拥有一个支持RV64G指�
 
 这样，操作系统内核的逻辑地址和物理地址就有了一一对应的关系，这也是我们在lab1中采用直模式（Bare mode）虚拟地址翻译机制也不会出错的原因。这里，需要解释的是对内核的机器模式栈的处理。通过实验一，我们知道机器模式栈是一个4KB的空间，它位于内核数据段，而不是专门分配一个额外的页面。这样（简单）处理的原因是PKE上运行的应用往往只有一个，算是非常简单的多任务环境，且操作系统利用机器模式栈的时机只有特殊的异常（如lab1_2中的非法指令异常）以及一些外部中断（如lab1_3中的时钟中断）。
 
-如图4.3b所示，在spike将操作系统内核装入物理内存后，剩余的内存空间应该是从内核数据段的结束（_end符号）到0xffffffff（即4GB-1的地址）。但是由于PKE操作系统内核的特殊性（它只需要支持给定应用的运行），lab2的代码将操作系统管理的空间进一步缩减，定义了一个操作系统需要管理的最大内存空间（kernel/config.h文件），从而提升实验代码的执行速度：
+如图4.3(b)所示，在spike将操作系统内核装入物理内存后，剩余的内存空间应该是从内核数据段的结束（_end符号）到0xffffffff（即4GB-1的地址）。但是由于PKE操作系统内核的特殊性（它只需要支持给定应用的运行），lab2的代码将操作系统管理的空间进一步缩减，定义了一个操作系统需要管理的最大内存空间（kernel/config.h文件），从而提升实验代码的执行速度：
 
 ```c
- 10 // the maximum memory space that PKE is allowed to manage
+ 10 // the maximum memory space that PKE is allowed to manage. added @lab2_1
  11 #define PKE_MAX_ALLOWABLE_RAM 128 * 1024 * 1024
  12
- 13 // the ending physical address that PKE observes
+ 13 // the ending physical address that PKE observes. added @lab2_1
  14 #define PHYS_TOP (DRAM_BASE + PKE_MAX_ALLOWABLE_RAM)
 ```
 
 可以看到，实验代码“人为”地将PKE操作系统所能管理的内存空间限制到了128MB（即PKE_MAX_ALLOWABLE_RAM的定义），同时，定义了PHYS_TOP为新的内存物理地址上限。实际上，kernel/pmm.c文件所定义的pmm_init()函数包含了PKE对物理内存进行管理的逻辑：
 
 ```c
- 62 void pmm_init() {
- 63   // start of kernel program segment
- 64   uint64 g_kernel_start = KERN_BASE;
- 65   uint64 g_kernel_end = (uint64)&_end;
- 66
- 67   uint64 pke_kernel_size = g_kernel_end - g_kernel_start;
- 68   sprint("PKE kernel start 0x%lx, PKE kernel end: 0x%lx, PKE kernel size: 0x%lx .\n",
- 69     g_kernel_start, g_kernel_end, pke_kernel_size);
- 70
- 71   // free memory starts from the end of PKE kernel and must be page-aligined
- 72   free_mem_start_addr = ROUNDUP(g_kernel_end , PGSIZE);
- 73
- 74   // recompute g_mem_size to limit the physical memory space that PKE kernel
- 75   // needs to manage
- 76   g_mem_size = MIN(PKE_MAX_ALLOWABLE_RAM, g_mem_size);
- 77   if( g_mem_size < pke_kernel_size )
- 78     panic( "Error when recomputing physical memory size (g_mem_size).\n" );
- 79
- 80   free_mem_end_addr = g_mem_size + DRAM_BASE;
- 81   sprint("free physical memory address: [0x%lx, 0x%lx] \n", free_mem_start_addr,
- 82     free_mem_end_addr - 1);
- 83
- 84   sprint("kernel memory manager is initializing ...\n");
- 85   // create the list of free pages
- 86   create_freepage_list(free_mem_start_addr, free_mem_end_addr);
- 87 }
+ 63 void pmm_init() {
+ 64   // start of kernel program segment
+ 65   uint64 g_kernel_start = KERN_BASE;
+ 66   uint64 g_kernel_end = (uint64)&_end;
+ 67
+ 68   uint64 pke_kernel_size = g_kernel_end - g_kernel_start;
+ 69   sprint("PKE kernel start 0x%lx, PKE kernel end: 0x%lx, PKE kernel size: 0x%lx .\n",
+ 70     g_kernel_start, g_kernel_end, pke_kernel_size);
+ 71
+ 72   // free memory starts from the end of PKE kernel and must be page-aligined
+ 73   free_mem_start_addr = ROUNDUP(g_kernel_end , PGSIZE);
+ 74
+ 75   // recompute g_mem_size to limit the physical memory space that our riscv-pke kernel
+ 76   // needs to manage
+ 77   g_mem_size = MIN(PKE_MAX_ALLOWABLE_RAM, g_mem_size);
+ 78   if( g_mem_size < pke_kernel_size )
+ 79     panic( "Error when recomputing physical memory size (g_mem_size).\n" );
+ 80
+ 81   free_mem_end_addr = g_mem_size + DRAM_BASE;
+ 82   sprint("free physical memory address: [0x%lx, 0x%lx] \n", free_mem_start_addr,
+ 83     free_mem_end_addr - 1);
+ 84
+ 85   sprint("kernel memory manager is initializing ...\n");
+ 86   // create the list of free pages
+ 87   create_freepage_list(free_mem_start_addr, free_mem_end_addr);
+ 88 }
 ```
 
 在76行，pmm_init()函数会计算g_mem_size，其值在PKE_MAX_ALLOWABLE_RAM和spike所模拟的物理内存大小中取最小值，也就是说除非spike命令行参数中-m参数后面所带的数字小于128（即128M），g_mem_size的大小将为128MB。
@@ -168,33 +167,35 @@ spike将创建一个模拟的RISC-V机器，该机器拥有一个支持RV64G指�
 操作系统内核建立页表的过程可以参考kernel/vmm.c文件中的kern_vm_init()函数的实现，需要说明的是kern_vm_init()函数在PKE操作系统内核的S态初始化过程（s_start函数）中被调用：
 
 ```c
-119 void kern_vm_init(void) {
-120   pagetable_t t_page_dir;
-121
-122   // allocate a page (t_page_dir) to be the page directory for kernel
-123   t_page_dir = (pagetable_t)alloc_page();
-124   memset(t_page_dir, 0, PGSIZE);
-125
-126   // map virtual address [KERN_BASE, _etext] to physical address [DRAM_BASE, DRAM_BASE+(_etext - KERN_BASE)],
-127   // to maintain (direct) text section kernel address mapping.
-128   kern_vm_map(t_page_dir, KERN_BASE, DRAM_BASE, (uint64)_etext - KERN_BASE,
-129          prot_to_type(PROT_READ | PROT_EXEC, 0));
-130
-131   sprint("KERN_BASE 0x%lx\n", lookup_pa(t_page_dir, KERN_BASE));
-132
-133   // also (direct) map remaining address space, to make them accessable from kernel.
-134   // this is important when kernel needs to access the memory content of user's app
-135   // without copying pages between kernel and user spaces.
-136   kern_vm_map(t_page_dir, (uint64)_etext, (uint64)_etext, PHYS_TOP - (uint64)_etext,
-137          prot_to_type(PROT_READ | PROT_WRITE, 0));
-138
-139   sprint("physical address of _etext is: 0x%lx\n", lookup_pa(t_page_dir, (uint64)_etext));
-140
-141   g_kernel_pagetable = t_page_dir;
-142 }
+120 void kern_vm_init(void) {
+121   // pagetable_t is defined in kernel/riscv.h. it's actually uint64*
+122   pagetable_t t_page_dir;
+123
+124   // allocate a page (t_page_dir) to be the page directory for kernel. alloc_page is defined in kernel/pmm.c
+125   t_page_dir = (pagetable_t)alloc_page();
+126   // memset is defined in util/string.c
+127   memset(t_page_dir, 0, PGSIZE);
+128
+129   // map virtual address [KERN_BASE, _etext] to physical address [DRAM_BASE, DRAM_BASE+(_etext - KERN_BASE)],
+130   // to maintain (direct) text section kernel address mapping.
+131   kern_vm_map(t_page_dir, KERN_BASE, DRAM_BASE, (uint64)_etext - KERN_BASE,
+132          prot_to_type(PROT_READ | PROT_EXEC, 0));
+133
+134   sprint("KERN_BASE 0x%lx\n", lookup_pa(t_page_dir, KERN_BASE));
+135
+136   // also (direct) map remaining address space, to make them accessable from kernel.
+137   // this is important when kernel needs to access the memory content of user's app
+138   // without copying pages between kernel and user spaces.
+139   kern_vm_map(t_page_dir, (uint64)_etext, (uint64)_etext, PHYS_TOP - (uint64)_etext,
+140          prot_to_type(PROT_READ | PROT_WRITE, 0));
+141
+142   sprint("physical address of _etext is: 0x%lx\n", lookup_pa(t_page_dir, (uint64)_etext));
+143
+144   g_kernel_pagetable = t_page_dir;
+145 }
 ```
 
-我们看到，kern_vm_init()函数会首先（123行）从空闲物理内存中获取（分配）一个t_page_dir指针所指向的物理页，该页将作为内核页表的根目录（page directory，对应图4.1中的VPN[2]）。接下来，将该页的内容清零（124行）、映射代码段到它对应的物理地址（128--129行）、映射数据段的起始到PHYS_TOP到它对应的物理地址空间（136--137行），最后记录内核页表的根目录页（141行）。
+我们看到，kern_vm_init()函数会首先（125行）从空闲物理内存中获取（分配）一个t_page_dir指针所指向的物理页，该页将作为内核页表的根目录（page directory，对应图4.1中的VPN[2]）。接下来，将该页的内容清零（127行）、映射代码段到它对应的物理地址（131--132行）、映射数据段的起始到PHYS_TOP到它对应的物理地址空间（139--140行），最后记录内核页表的根目录页（144行）。
 
 ####  应用进程
 
@@ -232,50 +233,56 @@ Program Headers:
 PKE实验二中的应用加载是通过kernel/kernel.c文件中的load_user_program函数来完成的：
 
 ```c
- 37 void load_user_program(process *proc) {
- 38   sprint("User application is loading.\n");
- 39   proc->trapframe = (trapframe *)alloc_page();  //trapframe
- 40   memset(proc->trapframe, 0, sizeof(trapframe));
- 41
- 42   //user pagetable
- 43   proc->pagetable = (pagetable_t)alloc_page();
- 44   memset((void *)proc->pagetable, 0, PGSIZE);
- 45
- 46   proc->kstack = (uint64)alloc_page() + PGSIZE;   //user kernel stack top
- 47   uint64 user_stack = (uint64)alloc_page();       //phisical address of user stack bottom
- 48   proc->trapframe->regs.sp = USER_STACK_TOP;  //virtual address of user stack top
- 49
- 50   sprint("user frame 0x%lx, user stack 0x%lx, user kstack 0x%lx \n", proc->trapframe,
- 51          proc->trapframe->regs.sp, proc->kstack);
- 52
- 53   load_bincode_from_host_elf(proc);
+ 38 void load_user_program(process *proc) {
+ 39   sprint("User application is loading.\n");
+ 40   // allocate a page to store the trapframe. alloc_page is defined in kernel/pmm.c. added @la    b2_1
+ 41   proc->trapframe = (trapframe *)alloc_page();
+ 42   memset(proc->trapframe, 0, sizeof(trapframe));
+ 43
+ 44   // allocate a page to store page directory. added @lab2_1
+ 45   proc->pagetable = (pagetable_t)alloc_page();
+ 46   memset((void *)proc->pagetable, 0, PGSIZE);
+ 47
+ 48   // allocate pages to both user-kernel stack and user app itself. added @lab2_1
+ 49   proc->kstack = (uint64)alloc_page() + PGSIZE;   //user kernel stack top
+ 50   uint64 user_stack = (uint64)alloc_page();       //phisical address of user stack bottom
+ 51
+ 52   // USER_STACK_TOP = 0x7ffff000, defined in kernel/memlayout.h
+ 53   proc->trapframe->regs.sp = USER_STACK_TOP;  //virtual address of user stack top
  54
- 55   // map user stack in userspace
- 56   user_vm_map((pagetable_t)proc->pagetable, USER_STACK_TOP - PGSIZE, PGSIZE, user_stack,
- 57          prot_to_type(PROT_WRITE | PROT_READ, 1));
- 58
- 59   // map trapframe in user space (direct mapping as in kernel space).
- 60   user_vm_map((pagetable_t)proc->pagetable, (uint64)proc->trapframe, PGSIZE, (uint64)proc->trapframe,
- 61          prot_to_type(PROT_WRITE | PROT_READ, 0));
- 62
- 63   // map S-mode trap vector section in user space (direct mapping as in kernel space)
- 64   // we assume that the size of usertrap.S is smaller than a page.
- 65   user_vm_map((pagetable_t)proc->pagetable, (uint64)trap_sec_start, PGSIZE, (uint64)trap_sec_start,
- 66          prot_to_type(PROT_READ | PROT_EXEC, 0));
- 67 }
+ 55   sprint("user frame 0x%lx, user stack 0x%lx, user kstack 0x%lx \n", proc->trapframe,
+ 56          proc->trapframe->regs.sp, proc->kstack);
+ 57
+ 58   // load_bincode_from_host_elf() is defined in kernel/elf.c
+ 59   load_bincode_from_host_elf(proc);
+ 60
+ 61   // populate the page table of user application. added @lab2_1
+ 62   // map user stack in userspace, user_vm_map is defined in kernel/vmm.c
+ 63   user_vm_map((pagetable_t)proc->pagetable, USER_STACK_TOP - PGSIZE, PGSIZE, user_stack,
+ 64          prot_to_type(PROT_WRITE | PROT_READ, 1));
+ 65
+ 66   // map trapframe in user space (direct mapping as in kernel space).
+ 67   user_vm_map((pagetable_t)proc->pagetable, (uint64)proc->trapframe, PGSIZE, (uint64)proc->trapframe,
+ 68          prot_to_type(PROT_WRITE | PROT_READ, 0));
+ 69
+ 70   // map S-mode trap vector section in user space (direct mapping as in kernel space)
+ 71   // here, we assume that the size of usertrap.S is smaller than a page.
+ 72   user_vm_map((pagetable_t)proc->pagetable, (uint64)trap_sec_start, PGSIZE, (uint64)trap_sec_start,
+ 73          prot_to_type(PROT_READ | PROT_EXEC, 0));
+ 74 }
 ```
 
 load_user_program()函数对于应用进程逻辑空间的操作可以分成以下几个部分：
 
-- （39--40行）分配一个物理页面，将其作为栈帧（trapframe），即发生中断时保存用户进程执行上下文的内存空间。由于物理页面都是从位于物理地址范围[_end，PHYS_TOP]的空间中分配的，它的首地址也将位于该区间。所以第60--61行的映射，也是做一个proc->trapframe到所分配页面的直映射（逻辑地址=物理地址）。
+- （41--42行）分配一个物理页面，将其作为栈帧（trapframe），即发生中断时保存用户进程执行上下文的内存空间。由于物理页面都是从位于物理地址范围[_end，PHYS_TOP]的空间中分配的，它的首地址也将位于该区间。所以第67--68行的映射，也是做一个proc->trapframe到所分配页面的直映射（逻辑地址=物理地址）。
 
-- （43--44行）分配一个物理页面作为存放进程页表根目录（page directory，对应图4.1中的VPN[2]）的空间。
+- （45--46行）分配一个物理页面作为存放进程页表根目录（page directory，对应图4.1中的VPN[2]）的空间。
 
-- （46行）分配了一个物理页面，作为用户进程的内核态栈，该栈将在用户进程进入中断处理时用作S模式内核处理函数使用的栈。然而，这个栈并未映射到用户进程的逻辑地址空间，而是将其首地址保存在proc->kstack中。
+- （49行）分配了一个物理页面，作为用户进程的内核态栈，该栈将在用户进程进入中断处理时用作S模式内核处理函数使用的栈。然而，这个栈并未映射到用户进程的逻辑地址空间，而是将其首地址保存在proc->kstack中。
 
-- （47--48行）再次分配一个物理页面，作为用户进程的用户态栈，该栈供应用在用户模式下使用，并在第56--57行映射到用户进程的逻辑地址USER_STACK_TOP。
-- （53行）调用load_bincode_from_host_elf()函数，该函数将读取应用所对应的ELF文件，并将其中的代码段读取到新分配的内存空间（物理地址位于[_end，PHYS_TOP]区间）。
-- （65--66行）将内核中的S态trap入口函数所在的物理页一一映射到用户进程的逻辑地址空间。
+- （50--53行）再次分配一个物理页面，作为用户进程的用户态栈，该栈供应用在用户模式下使用，并在第63--64行映射到用户进程的逻辑地址USER_STACK_TOP。
+- （59行）调用load_bincode_from_host_elf()函数，该函数将读取应用所对应的ELF文件，并将其中的代码段读取到新分配的内存空间（物理地址位于[_end，PHYS_TOP]区间）。
+- （72--73行）将内核中的S态trap入口函数所在的物理页一一映射到用户进程的逻辑地址空间。
 
 通过以上load_user_program()函数，我们可以大致画出用户进程的逻辑地址空间，以及该地址空间到物理地址空间的映射。
 
@@ -559,28 +566,28 @@ System is shutting down with exit code 0.
 一般来说，应用程序执行过程中的动态内存分配和回收，是操作系统中的堆（Heap）管理的内容。在本实验中，我们实际上是为PKE操作系统内核实现一个简单到不能再简单的“堆”。为实现naive_free()的内存回收过程，我们需要了解其对偶过程，即内存是如何“分配”给应用程序，并供后者使用的。为此，我们先阅读kernel/syscall.c文件中的naive_malloc()函数的底层实现，sys_user_allocate_page()：
 
 ```c
- 43 uint64 sys_user_allocate_page() {
- 44   void* pa = alloc_page();
- 45   uint64 va = g_ufree_page;
- 46   g_ufree_page += PGSIZE;
- 47   user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
- 48          prot_to_type(PROT_WRITE | PROT_READ, 1));
- 49
- 50   return va;
- 51 }
+ 42 uint64 sys_user_allocate_page() {
+ 43   void* pa = alloc_page();
+ 44   uint64 va = g_ufree_page;
+ 45   g_ufree_page += PGSIZE;
+ 46   user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
+ 47          prot_to_type(PROT_WRITE | PROT_READ, 1));
+ 48
+ 49   return va;
+ 50 }
 ```
 
-这个函数在44行分配了一个首地址为pa的物理页面，这个物理页面要以何种方式映射给应用进程使用呢？第45行给出了pa对应的逻辑地址va = g_ufree_page，并在46行对g_ufree_page进行了递增操作。最后在47--48行，将pa映射给了va地址。这个过程中，g_ufree_page是如何定义的呢？我们可以找到它在kernel/process.c文件中的定义：
+这个函数在43行分配了一个首地址为pa的物理页面，这个物理页面要以何种方式映射给应用进程使用呢？第44行给出了pa对应的逻辑地址va = g_ufree_page，并在45行对g_ufree_page进行了递增操作。最后在46--47行，将pa映射给了va地址。这个过程中，g_ufree_page是如何定义的呢？我们可以找到它在kernel/process.c文件中的定义：
 
 ```c
- 27 // start virtual address of our simple heap.
+ 27 // points to the first free page in our simple heap. added @lab2_2
  28 uint64 g_ufree_page = USER_FREE_ADDRESS_START;
 ```
 
 而USER_FREE_ADDRESS_START的定义在kernel/memlayout.h文件：
 
 ```c
- 17 // simple heap bottom, virtual address starts from 4MB
+ 17 // start virtual address (4MB) of our simple heap. added @lab2_2
  18 #define USER_FREE_ADDRESS_START 0x00000000 + PGSIZE * 1024
 ```
 
@@ -732,44 +739,50 @@ System is shutting down with exit code 0.
 另外，lab1_2中处理的非法指令异常是在M模式下处理的，原因是我们根本没有将该异常代理给S模式。但是，对于本实验中的缺页异常是不是也是需要在M模式处理呢？我们先回顾以下kernel/machine/minit.c文件中的delegate_traps()函数：
 
 ```c
- 51 static void delegate_traps() {
- 52   if (!supports_extension('S')) {
- 53     // confirm that our processor supports supervisor mode. abort if not.
- 54     sprint("s mode is not supported.\n");
- 55     return;
- 56   }
- 57
- 58   uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
- 59   uintptr_t exceptions = (1U << CAUSE_MISALIGNED_FETCH) | (1U << CAUSE_FETCH_PAGE_FAULT) |
- 60                          (1U << CAUSE_BREAKPOINT) | (1U << CAUSE_LOAD_PAGE_FAULT) |
- 61                          (1U << CAUSE_STORE_PAGE_FAULT) | (1U << CAUSE_USER_ECALL);
+ 55 static void delegate_traps() {
+ 56   // supports_extension macro is defined in kernel/riscv.h
+ 57   if (!supports_extension('S')) {
+ 58     // confirm that our processor supports supervisor mode. abort if it does not.
+ 59     sprint("S mode is not supported.\n");
+ 60     return;
+ 61   }
  62
- 63   write_csr(mideleg, interrupts);
- 64   write_csr(medeleg, exceptions);
- 65   assert(read_csr(mideleg) == interrupts);
- 66   assert(read_csr(medeleg) == exceptions);
- 67 }
+ 63   // macros used in following two statements are defined in kernel/riscv.h
+ 64   uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
+ 65   uintptr_t exceptions = (1U << CAUSE_MISALIGNED_FETCH) | (1U << CAUSE_FETCH_PAGE_FAULT) |
+ 66                          (1U << CAUSE_BREAKPOINT) | (1U << CAUSE_LOAD_PAGE_FAULT) |
+ 67                          (1U << CAUSE_STORE_PAGE_FAULT) | (1U << CAUSE_USER_ECALL);
+ 68
+ 69   // writes 64-bit values (interrupts and exceptions) to 'mideleg' and 'medeleg' (two
+ 70   // priviledged registers of RV64G machine) respectively.
+ 71   //
+ 72   // write_csr and read_csr are macros defined in kernel/riscv.h
+ 73   write_csr(mideleg, interrupts);
+ 74   write_csr(medeleg, exceptions);
+ 75   assert(read_csr(mideleg) == interrupts);
+ 76   assert(read_csr(medeleg) == exceptions);
+ 77 }
 ```
 
 而在本实验的应用中，产生缺页异常的本质还是应用往未被映射的内存空间“写”（以及后续的访问）所导致的，所以CAUSE_STORE_PAGE_FAULT是我们应该关注的异常。通过阅读delegate_traps()函数，我们看到该函数显然已将缺页异常（CAUSE_STORE_PAGE_FAULT）代理给了S模式，所以，接下来我们就应阅读kernel/strap.c文件中对于这类异常的处理：
 
 ```c
- 49 void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
- 50   sprint("handle_page_fault: %lx\n", stval);
- 51   switch (mcause) {
- 52     case CAUSE_STORE_PAGE_FAULT:
- 53       // TODO (lab2_3): implement the operations that solve the page fault to
- 54       // dynamically increase application stack.
- 55       // hint: first allocate a new physical page, and then, maps the new page to the
- 56       // virtual address that causes the page fault.
- 57       panic( "You need to implement the operations that actually handle the page fault in lab2_3.\n" );
- 58
- 59       break;
- 60     default:
- 61       sprint("unknown page fault.\n");
+ 52 void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
+ 53   sprint("handle_page_fault: %lx\n", stval);
+ 54   switch (mcause) {
+ 55     case CAUSE_STORE_PAGE_FAULT:
+ 56       // TODO (lab2_3): implement the operations that solve the page fault to
+ 57       // dynamically increase application stack.
+ 58       // hint: first allocate a new physical page, and then, maps the new page to the
+ 59       // virtual address that causes the page fault.
+ 60       panic( "You need to implement the operations that actually handle the page fault in lab 2_3.\n" );
+ 61
  62       break;
- 63   }
- 64 }
+ 63     default:
+ 64       sprint("unknown page fault.\n");
+ 65       break;
+ 66   }
+ 67 }
 ```
 
 这里，我们找到了之前运行./obj/app_sum_sequence出错的地方，我们只需要改正这一错误实现缺页处理，使得程序获得正确的输出就好。实现缺页处理的思路如下：
@@ -912,30 +925,48 @@ $ git merge lab2_3_pagefault -m "continue to work on lab2_challenge1"
 - user/app_singlepageheap.c
 
 ```c
- 1	/*
-2	 * Below is the given application for lab2_challenge2_singlepageheap.
-3	 * This app performs malloc memory.
-4	 */
-5	
-6	#include "user_lib.h"
-7	#include "util/types.h"
-8	#include "util/string.h"
-9	int main(void) {
-10	  
-11	  char str[20] = "hello world.";
-12	  char *m = (char *)better_malloc(100);
-13	  char *p = (char *)better_malloc(50);
-14	  if((uint64)p - (uint64)m > 512 ){
-15	    printu("you need to manage the vm space precisely!");
-16	    exit(-1);
-17	  }
-18	  better_free((void *)m);
-19	
-20	  strcpy(p,str);
-21	  printu("%s\n",p);
-22	  exit(0);
-23	  return 0;
-24	}
+  1 /*
+  2  * Below is the given application for lab2_challenge2_singlepageheap.
+  3  * This app performs malloc memory.
+  4  */
+  5
+  6 #include "user_lib.h"
+  7 //#include "util/string.h"
+  8
+  9 typedef unsigned long long uint64;
+ 10
+ 11 char* strcpy(char* dest, const char* src) {
+ 12   char* d = dest;
+ 13   while ((*d++ = *src++))
+ 14     ;
+ 15   return dest;
+ 16 }
+ 17 int main(void) {
+ 18
+ 19   char str[20] = "hello, world!!!";
+ 20   char *m = (char *)better_malloc(100);
+ 21   char *p = (char *)better_malloc(50);
+ 22   if((uint64)p - (uint64)m > 512 ){
+ 23     printu("you need to manage the vm space precisely!");
+ 24     exit(-1);
+ 25   }
+ 26   better_free((void *)m);
+ 27
+ 28   strcpy(p,str);
+ 29   printu("%s\n",p);
+ 30   char *n = (char *)better_malloc(50);
+ 31
+ 32   if(m != n)
+ 33   {
+ 34     printu("your malloc is not complete.\n");
+ 35     exit(-1);
+ 36   }
+ 37 //  else{
+ 38 //    printu("0x%lx 0x%lx\n", m, n);
+ 39 //  }
+ 40   exit(0);
+ 41   return 0;
+ 42 }
 ```
 
 以上程序先利用better_malloc分别申请100和50个字节的一个物理页的内存，然后使用better_free释放掉100个字节，向50个字节中复制一串字符串，进行输出。原本的pke中malloc的实现是非常简化的（一次直接分配一个页面），你的挑战任务是**修改内核(包括machine文件夹下)的代码，使得应用程序的malloc能够在一个物理页中分配，并对各申请块进行合理的管理**，如上面的应用预期输出如下：
@@ -954,9 +985,9 @@ kernel page table is on
 User application is loading.
 user frame 0x0000000087fbc000, user stack 0x000000007ffff000, user kstack 0x0000000087fbb000
 Application: obj/app_singlepageheap
-Application program entry point (virtual address): 0x00000000000100b0
+Application program entry point (virtual address): 0x000000000001008a
 Switch to user mode...
-hello world.
+hello, world!!!
 User exit with code:0.
 System is shutting down with exit code 0.
 ```

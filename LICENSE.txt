@@ -12,6 +12,7 @@ Copyright (c) 2021, Zhiyuan Shao (zyshao@hust.edu.cn),
                     Zichen Xu (xuzichen@hust.edu.cn),
                     Wenzhuo Liu (mgt@oi-wiki.org),
                     Huan Luo (rogeeerluo@gmail.com)
+                    Guo Li (2925441676@qq.com)
                    Huazhong University of Science and Technology
 
 Permission is hereby granted, free of charge, to any person obtaining
