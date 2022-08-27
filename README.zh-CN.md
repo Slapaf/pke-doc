@@ -4,8 +4,6 @@
 
 ## 第一部分：操作系统实验
 
-**操作系统部分的实验用课件（PPT）及视频讲解内容可通过[百度网盘](https://pan.baidu.com/s/1H3PWEGwTa_GVrhhLYDwCwg)下载，提取码：66a3**
-
 [第一章. RISC-V体系结构](chapter1_riscv.md) ----- 课程资源：    [PPT](./resources/第一章.RISC-V体系结构.pptx)        [视频讲解](https://www.bilibili.com/video/BV1ca411K7Zy)
 
 - [1.1 RISC-V发展历史](chapter1_riscv.md#history)  
