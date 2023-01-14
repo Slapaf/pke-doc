@@ -1,23 +1,22 @@
-## 第六章. RISCV处理器在PYNQ上的部署和接口实验
+## 第七章. RISCV处理器在PYNQ上的部署和接口实验
 
 ### 目录
 
-- [6.1 系统能力培养部分实验环境安装](#environments)  
-  - [6.1.1 Vivado开发环境](#subsec_vivadoenvironments)
-  - [6.1.2 fpga-pynq工程源码获取](#subsec_src)
-  - [6.1.3 工程编译环境配置](#subsec_projectenv)
-  - [6.1.4 蓝牙小车硬件组装](#subsec_hardware)
-  - [6.1.5 操作系统的替换修改](#subsec_system)
-- [6.2 fpga实验1：在Rocket Chip上添加uart接口](#hardware_lab1)
+- [7.1 系统能力培养部分实验环境安装](#environments)  
+  - [7.1.1 Vivado开发环境](#subsec_vivadoenvironments)
+  - [7.1.2 fpga-pynq工程源码获取](#subsec_src)
+  - [7.1.3 工程编译环境配置](#subsec_projectenv)
+  - [7.1.4 蓝牙小车硬件组装](#subsec_hardware)
+  - [7.1.5 操作系统的替换修改](#subsec_system)
+- [7.2 fpga实验1：在Rocket Chip上添加uart接口](#hardware_lab1)
   - [实验目的](#lab1_target)
   - [实验内容](#lab1_content)
   - [实验结果](#lab1_result)
-- [6.3 fpga实验2：以中断方式实现uart通信](#hardware_lab2)
+- [7.3 fpga实验2：以中断方式实现uart通信](#hardware_lab2)
   - [实验目的](#lab2_target)
   - [实验内容](#lab2_content)
   - [实验结果](#lab2_result)
-- [6.4 fpga实验3：配置连接到PS端的USB设备](#hardware_lab3)
-  
+- [7.4 fpga实验3：配置连接到PS端的USB设备](#hardware_lab3)
   - [实验目的](#lab3_target)
   - [实验内容](#lab3_content)
   - [实验结果](#lab3_result)
