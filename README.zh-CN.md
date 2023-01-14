@@ -64,12 +64,12 @@
 - [7.3 fpga实验2：以中断方式实现uart通信](chapter7_riscv_on_pynq.md#hardware_lab2)
 - [7.4 fpga实验3：配置连接到PS端的USB设备](chapter7_riscv_on_pynq.md#hardware_lab3)
 
-[第八章. PKE实验4：设备和文件](chapter8_device.md)  ----- 课程资源：    [PPT](./resources/第七章.实验4：设备管理.pptx)        [视频讲解](https://www.bilibili.com/video/BV1LB4y157Rb)
+[第八章. PKE实验5：设备和文件](chapter8_device.md)  ----- 课程资源：    [PPT](./resources/第七章.实验4：设备管理.pptx)        [视频讲解](https://www.bilibili.com/video/BV1LB4y157Rb)
 
- - [8.1 实验4的基础知识](chapter8_device.md#fundamental)  
- - [8.2 lab4_1 轮询方式](chapter8_device.md#polling)  
- - [8.3 lab4_2 中断方式](chapter8_device.md#PLIC)  
- - [8.4 lab4_3 主机设备访问](chapter8_device.md#hostdevice)  
+ - [8.1 实验5的基础知识](chapter8_device.md#fundamental)  
+ - [8.2 lab5_1 轮询方式](chapter8_device.md#polling)  
+ - [8.3 lab5_2 中断方式](chapter8_device.md#PLIC)  
+ - [8.4 lab5_3 主机设备访问](chapter8_device.md#hostdevice)  
 
 
 
