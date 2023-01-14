@@ -1,4 +1,4 @@
-# 第八章．实验4：设备管理（基于[RISCV-on-PYNQ](https://gitee.com/hustos/fpga-pynq)）
+# 第八章．实验5：设备管理（基于[RISCV-on-PYNQ](https://gitee.com/hustos/fpga-pynq)）
 
 
 ### 目录  
@@ -24,7 +24,7 @@
 
 <a name="fundamental"></a>
 
-## 7.1 实验4的基础知识
+## 7.1 实验5的基础知识
 
 完成前面所有实验后，PKE内核的整体功能已经得到完善。在实验四的设备实验中，我们将结合fpga-pynq板，在rocket chip上增加uart模块和蓝牙模块，并搭载PKE内核，实现蓝牙通信控制智能小车，设计设备管理的相关实验。
 
